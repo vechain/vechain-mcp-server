@@ -11,7 +11,7 @@ import {
 import { connectAllUpstreamServers, type UpstreamClients } from './upstream-servers'
 
 export const server = new McpServer({
-  name: 'vechain-mcp',
+  name: 'vechain-mcp-server',
   version: '1.0.0',
 })
 

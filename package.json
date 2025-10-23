@@ -1,5 +1,5 @@
 {
-  "name": "vechain-mcp",
+  "name": "vechain-mcp-server",
   "version": "1.0.0",
   "main": "src/index.ts",
   "type": "module",
