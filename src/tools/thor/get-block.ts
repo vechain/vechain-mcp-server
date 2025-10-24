@@ -1,31 +1,10 @@
-import { ThorClient } from '@vechain/sdk-network'
-import { z } from 'zod'
-import { THOR_NETWORK_CONFIG, ThorNetworkType } from '../config/network'
-import { logger } from '../utils/logger'
-import type { VeChainTool } from './VeChainTool'
-
-/**
- * Interface for Thor tool response
- */
-interface ThorToolResponse<T = unknown> {
-  content: { type: string; text: string }[]
-  structuredContent: {
-    ok: boolean
-    network: ThorNetworkType
-    data?: T
-    error?: string
-  }
-}
-
-/**
- * Schema for Thor tool response
- */
-const ThorStructuredOutputSchema = z.object({
-  ok: z.boolean(),
-  network: z.nativeEnum(ThorNetworkType),
-  data: z.any().optional(),
-  error: z.string().optional(),
-})
+import { type CompressedBlockDetail, ThorClient } from '@vechain/sdk-network'
+import type { z } from 'zod'
+import { THOR_NETWORK_CONFIG } from '../../config/network'
+import { logger } from '../../utils/logger'
+import type { VeChainTool } from '../VeChainTool'
+import { ThorStructuredOutputSchema, type ThorToolResponse } from './ThorResponse'
+import { ThorBlockRevisionSchema } from './ThorSchemas'
 
 /**
  * Tool for getting block details from Thor network
@@ -35,10 +14,10 @@ export const getBlock: VeChainTool = {
   title: 'Thor Get Block',
   description: 'Get block details from Thor network',
   inputSchema: {
-    blockRevision: z.string().describe('The block number, label or id to retrieve'),
+    blockRevision: ThorBlockRevisionSchema,
   },
   outputSchema: ThorStructuredOutputSchema.shape as z.ZodRawShape,
-  handler: async ({ blockRevision }: { blockRevision: string }): Promise<ThorToolResponse> => {
+  handler: async ({ blockRevision }: { blockRevision: string }): Promise<ThorToolResponse<CompressedBlockDetail>> => {
     try {
       logger.debug(`Getting block ${blockRevision} from Thor network`)
       const thorClient = ThorClient.at(THOR_NETWORK_CONFIG.url)

@@ -6,4 +6,5 @@ export {
   searchDocsVevote,
 } from './search-docs'
 
-export { getBlock } from './thor-tools'
+export { getBlock } from './thor/get-block'
+export { getTransaction } from './thor/get-transaction'
