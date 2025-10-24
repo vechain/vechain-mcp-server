@@ -25,7 +25,7 @@ export const getTransaction: VeChainTool = {
       if (transaction === null) {
         logger.warn(`Transaction ${transactionId} not found on Thor network`)
         return {
-          content: [{ type: 'text', text: 'Block not found' }],
+          content: [{ type: 'text', text: 'Transaction not found' }],
           structuredContent: {
             ok: false,
             network: THOR_NETWORK_CONFIG.type,
