@@ -1,6 +1,7 @@
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import express from 'express'
 import { cleanupServer, initServer, server } from './server'
+import { logger } from './utils/logger'
 
 // Set up Express and HTTP transport
 const app = express()
@@ -25,11 +26,11 @@ const port = parseInt(process.env.PORT || '4000', 10)
 
 app
   .listen(port, async () => {
-    console.log(`VeChain MCP Server running on http://localhost:${port}/mcp`)
+    logger.info(`VeChain MCP Server running on http://localhost:${port}/mcp`)
     await initServer()
   })
   .on('error', error => {
-    console.error('Server error:', error)
+    logger.error('Server error:', error)
     cleanupServer()
     process.exit(1)
   })

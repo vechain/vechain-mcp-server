@@ -1,14 +1,9 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { add } from './tools/add'
-import {
-  searchDocsStargate,
-  searchDocsVebetterDao,
-  searchDocsVechain,
-  searchDocsVechainKit,
-  searchDocsVevote,
-} from './tools/search-docs'
+import * as tools from './tools'
+import type { VeChainTool } from './tools/VeChainTool'
 import { connectAllUpstreamServers, type UpstreamClients } from './upstream-servers'
+import { logger } from './utils/logger'
 
 export const server = new McpServer({
   name: 'vechain-mcp-server',
@@ -19,25 +14,32 @@ export let upstreamClients: UpstreamClients = {}
 
 export async function initServer() {
   upstreamClients = await connectAllUpstreamServers()
-  // Addition tool for testing (to be removed)
-  server.registerTool(add.name, add.config, add)
 
   // Tools registration
-  server.registerTool(searchDocsVechain.name, searchDocsVechain.config, searchDocsVechain) // Docs search for VeChain documentation
-  server.registerTool(searchDocsVechainKit.name, searchDocsVechainKit.config, searchDocsVechainKit) // Docs search for VeChain Kit documentation
-  server.registerTool(searchDocsVebetterDao.name, searchDocsVebetterDao.config, searchDocsVebetterDao) // Docs search for VeBetterDao documentation
-  server.registerTool(searchDocsVevote.name, searchDocsVevote.config, searchDocsVevote) // Docs search for VeVote documentation
-  server.registerTool(searchDocsStargate.name, searchDocsStargate.config, searchDocsStargate) // Docs search for Stargate documentation
+  Object.values(tools).forEach((tool: VeChainTool) => {
+    server.registerTool(
+      tool.name,
+      {
+        title: tool.title,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        outputSchema: tool.outputSchema ?? undefined,
+        annotations: tool.annotations,
+      },
+      tool.handler,
+    )
+    logger.info(`Registered tool: ${tool.name}`)
+  })
 }
 
 export async function cleanupServer() {
-  console.error('Shutting down server...')
+  logger.info('Shutting down server...')
   for (const [name, client] of Object.entries(upstreamClients) as [keyof UpstreamClients, Client][]) {
     try {
       await client.close()
-      console.error(`Closed connection to ${name}`)
+      logger.info(`Closed connection to ${name}`)
     } catch (error) {
-      console.error(`Error closing ${name}:`, error)
+      logger.error(`Error closing ${name}:`, error)
     }
   }
 
