@@ -12,8 +12,8 @@ import { Address } from "@vechain/sdk-core";
  */
 export const ThorAccountDataSchema = z.object({
   address: z.string().regex(/^0x[a-fA-F0-9]+$/, 'Account address must be a 0x-prefixed hash.').min(42).max(42),
-  balance: z.bigint().describe('The balance of VET in the account'),
-  energy: z.bigint().describe('The energy of VTHO in the account'),
+  VET: z.bigint().describe('The balance of VET in the account'),
+  VTHO: z.bigint().describe('The balance of VTHO in the account'),
   type: z.enum(['wallet', 'contract']).describe('The type of the account'),
 })
 
@@ -48,8 +48,8 @@ export const getAccount: VeChainTool = {
       }
       const structuredAccount: ThorAccountData = {
         address: address,
-        balance: BigInt(account.balance) / 10n ** 18n,
-        energy: BigInt(account.energy) / 10n ** 18n,
+        VET: BigInt(account.balance) / 10n ** 18n,
+        VTHO: BigInt(account.energy) / 10n ** 18n,
         type: account.hasCode === true ? 'contract' : 'wallet',
       }
       return {
