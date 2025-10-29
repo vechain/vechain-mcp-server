@@ -8,3 +8,4 @@ export {
 export { decodeEvent } from './thor/decode-event'
 export { getBlock } from './thor/get-block'
 export { getTransaction } from './thor/get-transaction'
+export { getAccount } from './thor/get-account'

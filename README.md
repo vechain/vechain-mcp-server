@@ -113,6 +113,12 @@ The server runs on `http://localhost:4000/mcp` by default when using remote setu
 * `searchDocsVevote` - Search VeVote documentation
 * `searchDocsStargate` - Search Stargate documentation
 
+### Thor Read Tools
+
+* `get_block` - Get compressed block information
+* `get_transaction` - Get transaction information
+* `get_account` - Get account information
+
 ### Example Usage
 
 Each search tool accepts a `query` parameter and returns relevant documentation content.
@@ -125,3 +131,4 @@ Each search tool accepts a `query` parameter and returns relevant documentation 
   }
 }
 ```
+
