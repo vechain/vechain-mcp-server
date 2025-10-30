@@ -18,22 +18,31 @@ interface ThorNetworkConfig {
 }
 
 /**
+ * All Thor network configs keyed by network type
+ */
+const THOR_NETWORK_CONFIGS: Record<ThorNetworkType, ThorNetworkConfig> = {
+  [ThorNetworkType.MAINNET]: {
+    type: ThorNetworkType.MAINNET,
+    url: 'https://mainnet.vechain.org',
+  },
+  [ThorNetworkType.TESTNET]: {
+    type: ThorNetworkType.TESTNET,
+    url: 'https://testnet.vechain.org',
+  },
+  [ThorNetworkType.SOLO]: {
+    type: ThorNetworkType.SOLO,
+    url: 'http://localhost:8669',
+  },
+}
+
+/**
  * Get Thor network config
  */
 const getThorNetworkConfig = (): ThorNetworkConfig => {
   const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
   logger.info(`Using ${network} Thor network`)
-  if (network === ThorNetworkType.MAINNET || network === ThorNetworkType.TESTNET) {
-    return {
-      type: network,
-      url: `https://${network}.vechain.org`,
-    }
-  }
-  return {
-    type: network,
-    url: 'http://localhost:8669',
-  }
-}
+  return THOR_NETWORK_CONFIGS[network]
+}```
 
 /**
  * Config for Thor network
