@@ -7,19 +7,18 @@ import { logger } from './utils/logger'
 const app = express()
 app.use(express.json())
 
+// Create transport once - it manages sessions internally
+const transport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined,
+  enableJsonResponse: true,
+})
+
 app.post('/mcp', async (req, res) => {
-  // Create a new transport for each request to prevent request ID collisions
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  })
-
-  res.on('close', () => {
-    transport.close()
-  })
-
-  await server.connect(transport)
   await transport.handleRequest(req, res, req.body)
+})
+
+app.get('/mcp', async (req, res) => {
+  await transport.handleRequest(req, res)
 })
 
 const port = parseInt(process.env.PORT || '4000', 10)
@@ -28,12 +27,13 @@ app
   .listen(port, async () => {
     logger.info(`VeChain MCP Server running on http://localhost:${port}/mcp`)
     await initServer()
+    await server.connect(transport)
   })
   .on('error', error => {
     logger.error('Server error:', error)
-    cleanupServer()
+    cleanupServer(transport)
     process.exit(1)
   })
 
-process.on('SIGINT', cleanupServer)
-process.on('SIGTERM', cleanupServer)
+process.on('SIGINT', () => cleanupServer(transport))
+process.on('SIGTERM', () => cleanupServer(transport))
