@@ -16,5 +16,5 @@ export const ThorBlockRevisionSchema = z
  */
 export const ThorTransactionIdSchema = z
   .string()
-  .regex(/^0x[a-fA-F0-9]+$/, 'Transaction hash must be a 0x-prefixed hash.')
+  .regex(/^0x[a-fA-F0-9]{64}$/, 'Transaction hash must be a 0x-prefixed hash of 64 hex characters.')
   .describe('The transaction hash to retrieve')
