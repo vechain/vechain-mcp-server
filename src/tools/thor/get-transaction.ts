@@ -1,9 +1,7 @@
-import { ThorClient, type TransactionDetailNoRaw } from '@vechain/sdk-network'
-import type { z } from 'zod'
-import { getThorNetworkConfig } from '../../config/network'
+import { getThorClient, getThorNetworkType } from '../../config/network'
 import { logger } from '../../utils/logger'
 import type { VeChainTool } from '../VeChainTool'
-import { ThorStructuredOutputSchema, type ThorToolResponse } from './ThorResponse'
+import { ThorStructuredOutputSchema, type ThorToolResponseType } from './ThorResponse'
 import { ThorTransactionIdSchema } from './ThorSchemas'
 import { thorErrorResponse } from './utils'
 
@@ -17,17 +15,17 @@ export const getTransaction: VeChainTool = {
   inputSchema: {
     transactionId: ThorTransactionIdSchema,
   },
-  outputSchema: ThorStructuredOutputSchema.shape as z.ZodRawShape,
+  outputSchema: ThorStructuredOutputSchema.shape,
   annotations: {
     idempotentHint: true,
     openWorldHint: true,
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async ({ transactionId }: { transactionId: string }): Promise<ThorToolResponse<TransactionDetailNoRaw>> => {
+  handler: async ({ transactionId }: { transactionId: string }): Promise<ThorToolResponseType> => {
     try {
       logger.debug(`Getting transaction ${transactionId} from Thor network`)
-      const thorClient = ThorClient.at(getThorNetworkConfig().url)
+      const thorClient = getThorClient()
       const transaction = await thorClient.transactions.getTransaction(transactionId)
       if (transaction === null) {
         logger.warn(`Transaction ${transactionId} not found on Thor network`)
@@ -37,7 +35,7 @@ export const getTransaction: VeChainTool = {
         content: [{ type: 'text', text: JSON.stringify(transaction) }],
         structuredContent: {
           ok: true,
-          network: getThorNetworkConfig().type,
+          network: getThorNetworkType(),
           data: transaction,
         },
       }

@@ -42,6 +42,19 @@ npm start
 npm run inspect
 ```
 
+### Run Tests
+
+```bash
+npm run build
+npm run start
+```
+
+then in a second terminal:
+
+```bash
+npm run test
+```
+
 ## API Endpoint
 
 The server runs on `http://localhost:4000/mcp` by default.

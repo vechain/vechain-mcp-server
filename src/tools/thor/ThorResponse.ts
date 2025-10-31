@@ -2,14 +2,6 @@ import { z } from 'zod'
 import { ThorNetworkType } from '../../config/network'
 
 /**
- * Interface for Thor tool response
- */
-interface ThorToolResponse<T = unknown> {
-  content: { type: string; text: string }[]
-  structuredContent: z.infer<typeof ThorStructuredOutputSchema>
-}
-
-/**
  * Schema for Thor tool response
  */
 const ThorStructuredOutputSchema = z.object({
@@ -19,4 +11,17 @@ const ThorStructuredOutputSchema = z.object({
   error: z.string().optional(),
 })
 
-export { type ThorToolResponse, ThorStructuredOutputSchema }
+/**
+ * Interface for Thor tool response
+ */
+const ThorToolResponseSchema = z.object({
+  content: z.array(z.object({ type: z.string(), text: z.string() })),
+  structuredContent: ThorStructuredOutputSchema,
+})
+
+/**
+ * Type for Thor tool response
+ */
+type ThorToolResponseType = z.infer<typeof ThorToolResponseSchema>
+
+export { type ThorToolResponseType, ThorToolResponseSchema, ThorStructuredOutputSchema }

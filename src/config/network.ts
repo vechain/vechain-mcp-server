@@ -1,3 +1,4 @@
+import { ThorClient } from '@vechain/sdk-network'
 import { logger } from '../utils/logger'
 
 /**
@@ -35,13 +36,31 @@ const THOR_NETWORK_CONFIGS: Record<ThorNetworkType, ThorNetworkConfig> = {
   },
 }
 
+let _thorClient: ThorClient | null = null
+let _thorNetworkConfig: ThorNetworkConfig | null = null
+
 /**
- * Get Thor network config
+ * Get the Thor client for the configured network
  */
-const getThorNetworkConfig = (): ThorNetworkConfig => {
+const getThorClient = (): ThorClient => {
+  if (_thorClient) {
+    return _thorClient
+  }
   const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
   logger.info(`Using ${network} Thor network`)
-  return THOR_NETWORK_CONFIGS[network]
+  _thorNetworkConfig = THOR_NETWORK_CONFIGS[network]
+  _thorClient = ThorClient.at(_thorNetworkConfig.url)
+  return _thorClient
 }
 
-export { getThorNetworkConfig, ThorNetworkType }
+/**
+ * Get the Thor network type for the configured network
+ */
+const getThorNetworkType = (): ThorNetworkType => {
+  if (_thorNetworkConfig) {
+    return _thorNetworkConfig.type
+  }
+  throw new Error('Thor network not configured')
+}
+
+export { getThorClient, getThorNetworkType, ThorNetworkType }

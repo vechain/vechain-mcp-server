@@ -4,12 +4,13 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "dev": "tsx --watch src/index.ts",
     "start": "node dist/index.js",
     "format": "biome format --write",
     "lint": "biome lint --write",
-    "inspect": "DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run dev"
+    "inspect": "DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run dev",
+    "test": "jest --config jest.config.js"
   },
   "license": "ISC",
   "dependencies": {
@@ -23,7 +24,12 @@
     "@biomejs/biome": "^2.2.7",
     "@modelcontextprotocol/inspector": "^0.17.1",
     "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.9.1",
+    "jest": "^30.2.0",
+    "start-server-and-test": "^2.1.2",
+    "ts-jest": "^29.4.5",
+    "tsup": "^8.5.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }

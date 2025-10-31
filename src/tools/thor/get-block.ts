@@ -1,9 +1,7 @@
-import { type CompressedBlockDetail, ThorClient } from '@vechain/sdk-network'
-import type { z } from 'zod'
-import { getThorNetworkConfig } from '../../config/network'
+import { getThorClient, getThorNetworkType } from '../../config/network'
 import { logger } from '../../utils/logger'
 import type { VeChainTool } from '../VeChainTool'
-import { ThorStructuredOutputSchema, type ThorToolResponse } from './ThorResponse'
+import { ThorStructuredOutputSchema, type ThorToolResponseType } from './ThorResponse'
 import { ThorBlockRevisionSchema } from './ThorSchemas'
 import { thorErrorResponse } from './utils'
 
@@ -17,17 +15,17 @@ export const getBlock: VeChainTool = {
   inputSchema: {
     blockRevision: ThorBlockRevisionSchema,
   },
-  outputSchema: ThorStructuredOutputSchema.shape as z.ZodRawShape,
+  outputSchema: ThorStructuredOutputSchema.shape,
   annotations: {
     idempotentHint: true,
     openWorldHint: true,
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async ({ blockRevision }: { blockRevision: string }): Promise<ThorToolResponse<CompressedBlockDetail>> => {
+  handler: async ({ blockRevision }: { blockRevision: string }): Promise<ThorToolResponseType> => {
     try {
       logger.debug(`Getting block ${blockRevision} from Thor network`)
-      const thorClient = ThorClient.at(getThorNetworkConfig().url)
+      const thorClient = getThorClient()
       const block = await thorClient.blocks.getBlockCompressed(blockRevision)
       if (block === null) {
         logger.warn(`Block ${blockRevision} not found on Thor network`)
@@ -37,7 +35,7 @@ export const getBlock: VeChainTool = {
         content: [{ type: 'text', text: JSON.stringify(block) }],
         structuredContent: {
           ok: true,
-          network: getThorNetworkConfig().type,
+          network: getThorNetworkType(),
           data: block,
         },
       }
