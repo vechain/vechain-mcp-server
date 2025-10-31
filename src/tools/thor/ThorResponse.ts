@@ -6,12 +6,7 @@ import { ThorNetworkType } from '../../config/network'
  */
 interface ThorToolResponse<T = unknown> {
   content: { type: string; text: string }[]
-  structuredContent: {
-    ok: boolean
-    network: ThorNetworkType
-    data?: T
-    error?: string
-  }
+  structuredContent: z.infer<typeof ThorStructuredOutputSchema>
 }
 
 /**
@@ -20,7 +15,7 @@ interface ThorToolResponse<T = unknown> {
 const ThorStructuredOutputSchema = z.object({
   ok: z.boolean(),
   network: z.nativeEnum(ThorNetworkType),
-  data: z.any().optional(),
+  data: z.unknown().optional(),
   error: z.string().optional(),
 })
 

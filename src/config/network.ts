@@ -42,11 +42,6 @@ const getThorNetworkConfig = (): ThorNetworkConfig => {
   const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
   logger.info(`Using ${network} Thor network`)
   return THOR_NETWORK_CONFIGS[network]
-}```
+}
 
-/**
- * Config for Thor network
- */
-const THOR_NETWORK_CONFIG: ThorNetworkConfig = getThorNetworkConfig()
-
-export { ThorNetworkType, type ThorNetworkConfig, THOR_NETWORK_CONFIG }
+export { getThorNetworkConfig, ThorNetworkType }

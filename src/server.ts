@@ -1,7 +1,6 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import * as tools from './tools'
-import type { VeChainTool } from './tools/VeChainTool'
 import { connectAllUpstreamServers, type UpstreamClients } from './upstream-servers'
 import { logger } from './utils/logger'
 
@@ -16,7 +15,7 @@ export async function initServer() {
   upstreamClients = await connectAllUpstreamServers()
 
   // Tools registration
-  Object.values(tools).forEach((tool: VeChainTool) => {
+  for (const tool of Object.values(tools)) {
     server.registerTool(
       tool.name,
       {
@@ -29,7 +28,7 @@ export async function initServer() {
       tool.handler,
     )
     logger.info(`Registered tool: ${tool.name}`)
-  })
+  }
 }
 
 export async function cleanupServer() {
