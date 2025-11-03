@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { logger } from './utils/logger'
 
 export enum UpstreamServerName {
   VECHAIN = 'vechain',
@@ -53,7 +54,7 @@ async function connectUpstreamServer(serverName: UpstreamServerName): Promise<Cl
 
   await client.connect(transport)
 
-  console.log(`Connected to ${serverName} MCP server`)
+  logger.info(`Connected to ${serverName} MCP server`)
 
   return client
 }
