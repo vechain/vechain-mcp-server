@@ -4,7 +4,7 @@
   "main": "dist/http.js",
   "type": "module",
   "scripts": {
-    "build": "tsup src/http.ts src/stdio.ts --format esm --clean",
+    "build": "tsup",
     "dev": "tsx --watch src/http.ts",
     "start": "node dist/http.js",
     "format": "biome format --write",

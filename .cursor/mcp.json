@@ -1,12 +1,12 @@
 {
   "mcpServers": {
-    "vechain": {
+    "vechain-local": {
       "command": "node",
       "args": [
         "${workspaceFolder}/dist/stdio.js"
       ]
     },
-    "vechain-mcp-dev": {
+    "vechain-local-dev": {
       "url": "http://localhost:4000/mcp"
     }
   }

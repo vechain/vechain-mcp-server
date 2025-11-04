@@ -1,5 +1,6 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { cleanupServer, initServer, server } from './server.js'
+import { logger } from './utils/logger.js'
 
 async function main() {
   await initServer()
@@ -8,7 +9,7 @@ async function main() {
 }
 
 main().catch(error => {
-  console.error('Server error:', error)
+  logger.error('Server error:', error)
   cleanupServer()
   process.exit(1)
 })

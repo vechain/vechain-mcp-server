@@ -34,7 +34,7 @@ npm run build
 ```json
 {
   "mcpServers": {
-    "vechain": {
+    "vechain-local": {
       "command": "node",
       "args": [
         "/absolute/path/to/vechain-mcp-server/dist/stdio.js"
@@ -44,7 +44,7 @@ npm run build
 }
 ```
 
-In Curosor:
+In Cursor:
 
 > 💡 It should be configured automatically
 
@@ -60,16 +60,15 @@ In Claude Desktop:
 
 4. Restart app
 
-## Remote Setup
+## Development (works with Cursor)
 
-1. Start the server:
+In development mode, just run
 
 ```bash
-npm run build
-npm start
+npm run dev
 ```
 
-2. Add the following to your Cursor settings:
+and use the `vechain-local-dev` server below. It will watch file changes
 
 ```json
 {
@@ -80,18 +79,6 @@ npm start
   }
 }
 ```
-
-3. Restart Cursor
-
-## Development
-
-In development mode, just run
-
-```bash
-npm run dev
-```
-
-and use the `vechain-mcp-dev` server. It will watch file changes
 
 ### MCP Inspector (Development)
 
