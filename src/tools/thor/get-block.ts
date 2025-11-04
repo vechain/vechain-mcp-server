@@ -1,9 +1,21 @@
+import { z } from 'zod'
 import { getThorClient, getThorNetworkType } from '../../config/network'
 import { logger } from '../../utils/logger'
 import type { VeChainTool } from '../VeChainTool'
-import { ThorStructuredOutputSchema, type ThorToolResponseType } from './ThorResponse'
+import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
 import { ThorBlockRevisionSchema } from './ThorSchemas'
 import { thorErrorResponse } from './utils'
+
+/**
+ * Schemas for get block tool outputs
+ */
+
+// TODO: Define a schema for the compressed block
+const ThorBlockCompressedSchema = z.unknown()
+
+const ThorGetBlockOutputSchema = createThorStructuredOutputSchema(ThorBlockCompressedSchema.nullable())
+const ThorGetBlockResponseSchema = createThorToolResponseSchema(ThorBlockCompressedSchema.nullable())
+type ThorGetBlockResponse = z.infer<typeof ThorGetBlockResponseSchema>
 
 /**
  * Tool for getting block details from Thor network
@@ -12,17 +24,15 @@ export const getBlock: VeChainTool = {
   name: 'thorGetBlock',
   title: 'Thor Get Block',
   description: 'Get block details from Thor network',
-  inputSchema: {
-    blockRevision: ThorBlockRevisionSchema,
-  },
-  outputSchema: ThorStructuredOutputSchema.shape,
+  inputSchema: { blockRevision: ThorBlockRevisionSchema },
+  outputSchema: ThorGetBlockOutputSchema.shape,
   annotations: {
     idempotentHint: true,
     openWorldHint: true,
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async ({ blockRevision }: { blockRevision: string }): Promise<ThorToolResponseType> => {
+  handler: async ({ blockRevision }: { blockRevision: string }): Promise<ThorGetBlockResponse> => {
     try {
       logger.debug(`Getting block ${blockRevision} from Thor network`)
       const thorClient = getThorClient()

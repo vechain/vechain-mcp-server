@@ -1,9 +1,20 @@
+import { z } from 'zod'
 import { getThorClient, getThorNetworkType } from '../../config/network'
 import { logger } from '../../utils/logger'
 import type { VeChainTool } from '../VeChainTool'
-import { ThorStructuredOutputSchema, type ThorToolResponseType } from './ThorResponse'
+import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
 import { ThorTransactionIdSchema } from './ThorSchemas'
 import { thorErrorResponse } from './utils'
+
+/**
+ * Schemas for get transaction tool outputs
+ */
+// TODO: Define a schema for the transaction
+const ThorTransactionSchema = z.unknown()
+
+const ThorGetTransactionOutputSchema = createThorStructuredOutputSchema(ThorTransactionSchema.nullable())
+const ThorGetTransactionResponseSchema = createThorToolResponseSchema(ThorTransactionSchema.nullable())
+type ThorGetTransactionResponse = z.infer<typeof ThorGetTransactionResponseSchema>
 
 /**
  * Tool for getting transaction details from Thor network
@@ -15,14 +26,14 @@ export const getTransaction: VeChainTool = {
   inputSchema: {
     transactionId: ThorTransactionIdSchema,
   },
-  outputSchema: ThorStructuredOutputSchema.shape,
+  outputSchema: ThorGetTransactionOutputSchema.shape,
   annotations: {
     idempotentHint: true,
     openWorldHint: true,
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async ({ transactionId }: { transactionId: string }): Promise<ThorToolResponseType> => {
+  handler: async ({ transactionId }: { transactionId: string }): Promise<ThorGetTransactionResponse> => {
     try {
       logger.debug(`Getting transaction ${transactionId} from Thor network`)
       const thorClient = getThorClient()
