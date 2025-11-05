@@ -1,5 +1,6 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import * as tools from './tools'
 import { connectAllUpstreamServers, type UpstreamClients } from './upstream-servers'
 import { logger } from './utils/logger'
@@ -31,7 +32,7 @@ export async function initServer() {
   }
 }
 
-export async function cleanupServer() {
+export async function cleanupServer(transport?: Transport) {
   logger.info('Shutting down server...')
   for (const [name, client] of Object.entries(upstreamClients) as [keyof UpstreamClients, Client][]) {
     try {
@@ -39,6 +40,15 @@ export async function cleanupServer() {
       logger.info(`Closed connection to ${name}`)
     } catch (error) {
       logger.error(`Error closing ${name}:`, error)
+    }
+  }
+
+  if (transport) {
+    try {
+      await transport.close()
+      logger.error('Closed transport')
+    } catch (error) {
+      logger.error('Error closing transport:', error)
     }
   }
 

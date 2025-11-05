@@ -21,19 +21,63 @@ A Model Context Protocol (MCP) server that provides access to VeChain ecosystem 
 npm install
 ```
 
-## Usage
+## Setup with MCP clients (local)
 
-### Development Mode
+1. Build the project:
+
+```bash
+npm run build
+```
+
+3. Add the following to your config file:
+
+```json
+{
+  "mcpServers": {
+    "vechain-local": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/vechain-mcp-server/dist/stdio.js"
+      ]
+    }
+  }
+}
+```
+
+In Cursor:
+
+> 💡 It should be configured automatically
+
+   - Open Cursor Settings (Cmd/Ctrl + Shift + P → "Open MCP Settings")
+
+In Claude Desktop:
+
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+4. Restart app
+
+## Development (works with Cursor)
+
+In development mode, just run
 
 ```bash
 npm run dev
 ```
 
-### Production Mode
+and use the `vechain-local-dev` server below. It will watch file changes
 
-```bash
-npm run build
-npm start
+```json
+{
+  "mcpServers": {
+    "vechain": {
+      "url": "http://localhost:4000/mcp"
+    }
+  }
+}
 ```
 
 ### MCP Inspector (Development)
@@ -57,7 +101,7 @@ npm run test
 
 ## API Endpoint
 
-The server runs on `http://localhost:4000/mcp` by default.
+The server runs on `http://localhost:4000/mcp` by default when using remote setup.
 
 ## Available Tools
 

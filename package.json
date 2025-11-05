@@ -1,12 +1,12 @@
 {
   "name": "vechain-mcp-server",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "dist/http.js",
   "type": "module",
   "scripts": {
     "build": "tsup",
-    "dev": "tsx --watch src/index.ts",
-    "start": "node dist/index.js",
+    "dev": "tsx --watch src/http.ts",
+    "start": "node dist/http.js",
     "format": "biome format --write",
     "lint": "biome lint --write",
     "inspect": "DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run dev",
