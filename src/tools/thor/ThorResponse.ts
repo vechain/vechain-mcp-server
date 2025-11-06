@@ -2,26 +2,30 @@ import { z } from 'zod'
 import { ThorNetworkType } from '../../config/network'
 
 /**
- * Schema for Thor tool response
+ * Generic function to create a Thor structured output schema with typed data
+ * @param dataSchema - Zod schema for the data field
+ * @returns Zod schema for Thor structured output
  */
-const ThorStructuredOutputSchema = z.object({
-  ok: z.boolean(),
-  network: z.nativeEnum(ThorNetworkType),
-  data: z.unknown().optional(),
-  error: z.string().optional(),
-})
+const createThorStructuredOutputSchema = <T extends z.ZodType>(dataSchema: T) =>
+  z.object({
+    ok: z.boolean(),
+    network: z.nativeEnum(ThorNetworkType),
+    data: dataSchema.optional(),
+    error: z.string().optional(),
+  })
 
 /**
- * Interface for Thor tool response
+ * Generic function to create a Thor tool response schema with typed data
+ * @param dataSchema - Zod schema for the data field
+ * @returns Zod schema for Thor tool response
  */
-const ThorToolResponseSchema = z.object({
-  content: z.array(z.object({ type: z.string(), text: z.string() })),
-  structuredContent: ThorStructuredOutputSchema,
-})
+const createThorToolResponseSchema = <T extends z.ZodType>(dataSchema: T) => {
+  const structuredOutputSchema = createThorStructuredOutputSchema(dataSchema)
 
-/**
- * Type for Thor tool response
- */
-type ThorToolResponseType = z.infer<typeof ThorToolResponseSchema>
+  return z.object({
+    content: z.array(z.object({ type: z.string(), text: z.string() })),
+    structuredContent: structuredOutputSchema,
+  })
+}
 
-export { type ThorToolResponseType, ThorToolResponseSchema, ThorStructuredOutputSchema }
+export { createThorStructuredOutputSchema, createThorToolResponseSchema }

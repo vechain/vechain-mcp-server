@@ -1,3 +1,4 @@
+import type { AbiParameter } from 'viem'
 import { z } from 'zod'
 
 /**
@@ -18,3 +19,46 @@ export const ThorTransactionIdSchema = z
   .string()
   .regex(/^0x[a-fA-F0-9]{64}$/, 'Transaction hash must be a 0x-prefixed hash of 64 hex characters.')
   .describe('The transaction hash to retrieve')
+
+/**
+ * Schema for Thor account address
+ */
+export const ThorAccountSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]+$/, 'Account address must be a 0x-prefixed hash.')
+  .min(42)
+  .max(42)
+  .describe('The account address to retrieve') as z.ZodType<`0x${string}`>
+
+/**
+ * Schema for Thor hex string
+ */
+export const HexStringSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]*$/, 'Must be a valid hex string starting with 0x')
+  .min(2)
+  .describe('A valid hex string starting with 0x') as z.ZodType<`0x${string}`>
+
+/**
+ * Schema for Thor raw event
+ */
+export const ThorRawEventSchema = z.object({
+  address: ThorAccountSchema.describe('The address of the contract that emitted the event'),
+  topics: z.array(HexStringSchema).describe('The topics to decode as hex string starting with 0x'),
+  data: HexStringSchema.describe('The data to decode as hex string starting with 0x'),
+})
+
+export const AbiParameterSchema = z.object({
+  internalType: z.string(),
+  name: z.string(),
+  type: z.string(),
+}) as z.ZodType<AbiParameter>
+
+export const ThorDecodedEventSchema = z.object({
+  address: ThorAccountSchema,
+  signature: z.string(),
+  signatureHash: z.string(),
+  args: z.record(z.string(), z.coerce.string()),
+  name: z.string(),
+  inputs: z.array(AbiParameterSchema),
+})

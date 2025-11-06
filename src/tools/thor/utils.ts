@@ -1,18 +1,20 @@
 import { getThorNetworkType } from '../../config/network'
-import type { ThorToolResponseType } from './ThorResponse'
+import { logger } from '../../utils/logger'
 
 /**
  * Create a Thor tool response with an error message
  * @param message - The error message
  * @returns A Thor tool response with an error message
  */
-function thorErrorResponse(message: string): ThorToolResponseType {
+function thorErrorResponse(message: string) {
+  logger.warn(message)
   return {
     content: [{ type: 'text', text: message }],
     structuredContent: {
       ok: false,
       network: getThorNetworkType(),
       error: message,
+      data: null,
     },
   }
 }
