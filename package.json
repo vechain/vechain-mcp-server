@@ -1,10 +1,13 @@
 {
   "name": "@vechain/mcp-server",
-  "version": "1.0.0-alpha.0",
-  "main": "dist/stdio.js",
+  "version": "1.0.0-alpha.1",
   "type": "module",
   "author": "VeChain Foundation",
   "license": "MIT",
+  "main": "./dist/stdio.js",
+  "bin": {
+    "vechain-mcp-server": "./dist/stdio.js"
+  },
   "homepage": "https://github.com/vechain/vechain-mcp-server",
   "repository": {
     "type": "git",
