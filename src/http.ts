@@ -13,6 +13,10 @@ const transport = new StreamableHTTPServerTransport({
   enableJsonResponse: true,
 })
 
+app.get('/health', async (_, res) => {
+  res.json({ status: 'ok' })
+})
+
 app.post('/mcp', async (req, res) => {
   await transport.handleRequest(req, res, req.body)
 })
@@ -25,9 +29,9 @@ const port = parseInt(process.env.PORT || '4000', 10)
 
 app
   .listen(port, async () => {
-    logger.info(`VeChain MCP Server running on http://localhost:${port}/mcp`)
     await initServer()
     await server.connect(transport)
+    logger.info(`VeChain MCP Server running on http://localhost:${port}/mcp`)
   })
   .on('error', error => {
     logger.error('Server error:', error)
