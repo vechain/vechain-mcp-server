@@ -1,7 +1,7 @@
 {
   "name": "@vechain/mcp-server",
   "version": "1.0.0-alpha.0",
-  "main": "dist/http.js",
+  "main": "dist/stdio.js",
   "type": "module",
   "author": "VeChain Foundation",
   "license": "MIT",
