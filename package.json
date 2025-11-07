@@ -1,5 +1,5 @@
 {
-  "name": "vechain-mcp-server",
+  "name": "@vechain/mcp-server",
   "version": "1.0.0",
   "main": "dist/http.js",
   "type": "module",
