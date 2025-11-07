@@ -1,6 +1,6 @@
 {
-  "name": "vechain-mcp-server",
-  "version": "1.0.0",
+  "name": "@vechain/mcp-server",
+  "version": "1.0.0-alpha.0",
   "main": "dist/http.js",
   "type": "module",
   "author": "VeChain Foundation",

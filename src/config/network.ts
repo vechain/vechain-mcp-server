@@ -36,31 +36,41 @@ const THOR_NETWORK_CONFIGS: Record<ThorNetworkType, ThorNetworkConfig> = {
   },
 }
 
+const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
+
 let _thorClient: ThorClient | null = null
 let _thorNetworkConfig: ThorNetworkConfig | null = null
+
+/**
+ * Set the Thor network config and client
+ * @param network
+ */
+const initThor = (): { client: ThorClient; networkConfig: ThorNetworkConfig } => {
+  if (_thorClient && _thorNetworkConfig) {
+    return { client: _thorClient, networkConfig: _thorNetworkConfig }
+  }
+
+  logger.info(`Initializing ${network} Thor client`)
+  _thorNetworkConfig = THOR_NETWORK_CONFIGS[network]
+  _thorClient = ThorClient.at(_thorNetworkConfig.url)
+
+  return { client: _thorClient, networkConfig: _thorNetworkConfig }
+}
 
 /**
  * Get the Thor client for the configured network
  */
 const getThorClient = (): ThorClient => {
-  if (_thorClient) {
-    return _thorClient
-  }
-  const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
-  logger.info(`Using ${network} Thor network`)
-  _thorNetworkConfig = THOR_NETWORK_CONFIGS[network]
-  _thorClient = ThorClient.at(_thorNetworkConfig.url)
-  return _thorClient
+  const { client } = initThor()
+  return client
 }
 
 /**
  * Get the Thor network type for the configured network
  */
 const getThorNetworkType = (): ThorNetworkType => {
-  if (_thorNetworkConfig) {
-    return _thorNetworkConfig.type
-  }
-  throw new Error('Thor network not configured')
+  const { networkConfig } = initThor()
+  return networkConfig.type
 }
 
-export { getThorClient, getThorNetworkType, ThorNetworkType }
+export { getThorClient, getThorNetworkType, initThor, ThorNetworkType }
