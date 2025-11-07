@@ -23,7 +23,7 @@ export const ThorTransactionIdSchema = z
 /**
  * Schema for Thor account address
  */
-export const ThorAddresstSchema = z
+export const ThorAddressSchema = z
   .string()
   .regex(/^0x[a-fA-F0-9]+$/, 'Account address must be a 0x-prefixed hash.')
   .min(42)
@@ -43,7 +43,7 @@ export const HexStringSchema = z
  * Schema for Thor raw event
  */
 export const ThorRawEventSchema = z.object({
-  address: ThorAddresstSchema.describe('The address of the contract that emitted the event'),
+  address: ThorAddressSchema.describe('The address of the contract that emitted the event'),
   topics: z.array(HexStringSchema).describe('The topics to decode as hex string starting with 0x'),
   data: HexStringSchema.describe('The data to decode as hex string starting with 0x'),
 })
@@ -55,7 +55,7 @@ export const AbiParameterSchema = z.object({
 }) as z.ZodType<AbiParameter>
 
 export const ThorDecodedEventSchema = z.object({
-  address: ThorAddresstSchema,
+  address: ThorAddressSchema,
   signature: z.string(),
   signatureHash: z.string(),
   args: z.record(z.string(), z.coerce.string()),
