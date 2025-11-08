@@ -1,10 +1,17 @@
 # VeChain MCP Server
 
-A Model Context Protocol (MCP) server that provides access to VeChain ecosystem documentation through a unified interface. This server aggregates documentation from multiple VeChain-related projects and makes them searchable through MCP tools.
+A Model Context Protocol (MCP) server that provides AI assistants with access to VeChain ecosystem documentation and blockchain data. This server enables seamless integration of VeChain capabilities into AI workflows through the MCP standard.
+
+## What is MCP?
+
+The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open standard that enables AI assistants to securely access external data and tools. This server implements MCP to provide VeChain-specific capabilities to any MCP-compatible client.
 
 ## Features
 
 * **Unified Documentation Search**: Search across multiple VeChain ecosystem documentation resources
+* **Blockchain Data Access**: Query VeChain Thor blockchain data (blocks, transactions, accounts)
+* **Event Decoding**: Decode raw blockchain events into human-readable format
+* **Multi-Network Support**: Connect to mainnet, testnet, or solo networks
 
 ## Supported Documentation Sources
 
@@ -14,14 +21,114 @@ A Model Context Protocol (MCP) server that provides access to VeChain ecosystem 
 4. **VeVote** - Voting platform documentation
 5. **Stargate** - VeChain infrastructure documentation
 
-## Installation
+## Prerequisites
+
+* **Node.js** 18.x or higher (required for running the server)
+* An **MCP-compatible client** such as:
+  + [Claude Desktop](https://claude.ai/download) (macOS/Windows)
+  + [Cursor](https://cursor.sh) (code editor with MCP support)
+  + [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) (CLI tool)
+
+## Available Tools
+
+### Documentation Search Tools
+
+* `searchDocsVechain` - Search VeChain documentation
+* `searchDocsVechainKit` - Search VeChain Kit documentation
+* `searchDocsVebetterDao` - Search VeBetterDao documentation
+* `searchDocsVevote` - Search VeVote documentation
+* `searchDocsStargate` - Search Stargate documentation
+
+### Thor Read Tools
+
+* `thorGetBlock` - Get compressed block information
+* `thorGetTransaction` - Get transaction information
+* `thorGetAccount` - Get account information
+* `thorDecodeEvent` - Decode a raw event emitted on the thor network
+
+## Quick Start
+
+### 1. Install in Your MCP Client
+
+The easiest way to use the VeChain MCP server is to install it directly from npm using npx. This method automatically downloads and runs the latest version without requiring local setup.
+
+#### For Claude Desktop
+
+1. Locate your Claude Desktop configuration file:
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+2. Add the VeChain server configuration:
+
+```json
+{
+  "mcpServers": {
+    "vechain": {
+      "command": "npx",
+      "args": ["-y", "@vechain/mcp-server"],
+      "env": {
+        "VECHAIN_NETWORK": "mainnet"
+      }
+    }
+  }
+}
+```
+
+3. Restart Claude Desktop
+
+#### For Cursor
+
+1. Open Cursor Settings:
+   - Press `Cmd/Ctrl + Shift + P`
+   - Type "Open MCP Settings" and select it
+
+2. Add the VeChain server configuration (same JSON as above)
+
+3. Restart Cursor
+
+### 2. Verify Installation
+
+Once your MCP client restarts, you should see the VeChain MCP tools available. You can test by asking your AI assistant:
+
+* "Search VeChain documentation for VTHO"
+* "Get the latest block on VeChain"
+* "What is my VeChain account balance for address 0x..."
+
+## Configuration
+
+### Network Selection
+
+Set the `VECHAIN_NETWORK` environment variable to connect to different VeChain networks:
+
+* `mainnet` - VeChain MainNet (default, production network)
+* `testnet` - VeChain TestNet (for testing and development)
+* `solo` - Local solo network (for local development)
+
+Example configuration for testnet:
+
+```json
+{
+  "mcpServers": {
+    "vechain": {
+      "command": "npx",
+      "args": ["-y", "@vechain/mcp-server"],
+      "env": {
+        "VECHAIN_NETWORK": "testnet"
+      }
+    }
+  }
+}
+```
+
+## Setup locally
 
 ```bash
 # Install dependencies
 npm install
 ```
-
-## Setup with MCP clients (local)
 
 1. Build the project:
 
@@ -29,7 +136,7 @@ npm install
 npm run build
 ```
 
-3. Add the following to your config file:
+2. Add the following to your config file:
 
 ```json
 {
@@ -44,21 +151,7 @@ npm run build
 }
 ```
 
-In Cursor:
-
-> 💡 It should be configured automatically
-
-   - Open Cursor Settings (Cmd/Ctrl + Shift + P → "Open MCP Settings")
-
-In Claude Desktop:
-
-   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
-
-4. Restart app
+> 💡 Configured automatically for Cursor and Claude code
 
 ## Development (works with Cursor)
 
@@ -73,7 +166,7 @@ and use the `vechain-local-dev` server below. It will watch file changes
 ```json
 {
   "mcpServers": {
-    "vechain": {
+    "vechain-local-dev": {
       "url": "http://localhost:4000/mcp"
     }
   }
@@ -97,38 +190,4 @@ then in a second terminal:
 
 ```bash
 npm run test
-```
-
-## API Endpoint
-
-The server runs on `http://localhost:4000/mcp` by default when using remote setup.
-
-## Available Tools
-
-### Documentation Search Tools
-
-* `searchDocsVechain` - Search VeChain documentation
-* `searchDocsVechainKit` - Search VeChain Kit documentation
-* `searchDocsVebetterDao` - Search VeBetterDao documentation
-* `searchDocsVevote` - Search VeVote documentation
-* `searchDocsStargate` - Search Stargate documentation
-
-### Thor Read Tools
-
-* `thorGetBlock` - Get compressed block information
-* `thorGetTransaction` - Get transaction information
-* `thorGetAccount` - Get account information
-* `thorDecodeEvent` - Decode a raw event emitted on the thor network
-
-### Example Usage
-
-Each search tool accepts a `query` parameter and returns relevant documentation content.
-
-```json
-{
-  "name": "searchDocsVechain",
-  "arguments": {
-    "query": "what is VTHO ?"
-  }
-}
 ```
