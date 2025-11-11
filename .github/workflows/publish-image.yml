@@ -17,20 +17,92 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image for local test (amd64, load into Docker)
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: vechain-mcp-server:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run container (background) for integration test
+        run: |
+          docker run -d --rm \
+            -p 4000:4000 \
+            -e VECHAIN_NETWORK=mainnet \
+            --name vechain-mcp-ci \
+            vechain-mcp-server:ci-test
+
+      - name: Wait for health endpoint
+        shell: bash
+        run: |
+          set -e
+          for i in {1..60}; do
+            if curl -fsS http://localhost:4000/health >/dev/null; then
+              echo "Health OK"
+              exit 0
+            fi
+            echo "Waiting for server... ($i)"
+            sleep 2
+          done
+          echo "Server failed to become healthy in time"
+          docker logs vechain-mcp-ci || true
+          exit 1
+
+      - name: Integration check - thorGetBlock 1000
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -s -X POST http://localhost:4000/mcp \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            -d '{
+              "jsonrpc":"2.0",
+              "id":"1",
+              "method":"tools/call",
+              "params":{"name":"thorGetBlock","arguments":{"blockRevision":"1000"}}
+            }')
+          echo "$RESPONSE" | jq .
+          # Minimal and stable assertions
+          echo "$RESPONSE" | jq -e '.result.structuredContent.ok == true'
+          echo "$RESPONSE" | jq -e '.result.structuredContent.network == "mainnet"'
+          echo "$RESPONSE" | jq -e '.result.structuredContent.data.number == 1000'
+          echo "$RESPONSE" | jq -e '.result.structuredContent.data.id == "0x000003e80b3aca03fe03a742d0cd07b1260b42923c56b1032028e348d4da3188"'
+
+      - name: Run vulnerability scan (Trivy)
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        with:
+          image-ref: vechain-mcp-server:ci-test
+          format: 'table'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+          scanners: 'misconfig,vuln,secret'
+          exit-code: '1'
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2
+
+      - name: Stop test container
+        if: always()
+        run: docker stop vechain-mcp-ci || true
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
