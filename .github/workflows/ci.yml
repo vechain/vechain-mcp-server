@@ -26,4 +26,10 @@ jobs:
     needs: [build]
     uses: ./.github/workflows/test.yml
 
+  publish:
+    name: Publish image
+    needs: [test]
+    uses: ./.github/workflows/publish-image.yml
+    secrets: inherit
+
 
