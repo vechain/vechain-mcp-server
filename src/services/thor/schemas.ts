@@ -12,6 +12,9 @@ export const ThorBlockRevisionSchema = z
   )
   .describe('The block number, label or id to retrieve')
 
+// TODO: Define a schema for the compressed block
+export const ThorBlockCompressedSchema = z.unknown()
+
 /**
  * Schema for Thor transaction id
  */
@@ -19,6 +22,9 @@ export const ThorTransactionIdSchema = z
   .string()
   .regex(/^0x[a-fA-F0-9]{64}$/, 'Transaction hash must be a 0x-prefixed hash of 64 hex characters.')
   .describe('The transaction hash to retrieve')
+
+// TODO: Define a schema for the transaction
+export const ThorTransactionSchema = z.unknown()
 
 /**
  * Schema for Thor account address

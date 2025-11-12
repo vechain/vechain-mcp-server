@@ -1,9 +1,9 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types'
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import { upstreamClients } from '../server'
-import { UpstreamServerName } from '../upstream-servers'
-import { logger } from '../utils/logger'
-import type { VeChainTool } from './VeChainTool'
+import { upstreamClients } from '@/server'
+import type { VeChainTool } from '@/types'
+import { UpstreamServerName } from '@/upstream-servers'
+import { logger } from '@/utils/logger'
 
 /**
  * Tool for searching VeChain documentation

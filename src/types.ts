@@ -1,5 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <generic type> */
-import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types'
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { z } from 'zod'
 
 /**

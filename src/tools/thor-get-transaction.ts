@@ -1,15 +1,19 @@
-import { z } from 'zod'
+import type { z } from 'zod'
+import {
+  createThorStructuredOutputSchema,
+  createThorToolResponseSchema,
+  getThorClient,
+  getThorNetworkType,
+  ThorTransactionIdSchema,
+  ThorTransactionSchema,
+  thorErrorResponse,
+} from '@/services/thor'
+import type { VeChainTool } from '@/types'
 import { logger } from '@/utils/logger'
-import type { VeChainTool } from '../VeChainTool'
-import { getThorClient, getThorNetworkType } from './config'
-import { ThorTransactionIdSchema } from './schemas'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema, thorErrorResponse } from './utils'
 
 /**
  * Schemas for get transaction tool outputs
  */
-// TODO: Define a schema for the transaction
-const ThorTransactionSchema = z.unknown()
 
 const ThorGetTransactionOutputSchema = createThorStructuredOutputSchema(ThorTransactionSchema)
 const ThorGetTransactionResponseSchema = createThorToolResponseSchema(ThorTransactionSchema)

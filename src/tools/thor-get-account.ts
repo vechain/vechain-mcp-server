@@ -1,11 +1,17 @@
 import { Address } from '@vechain/sdk-core'
 import { formatUnits, hexToBigInt } from 'viem'
 import { z } from 'zod'
+import {
+  createThorStructuredOutputSchema,
+  createThorToolResponseSchema,
+  getThorClient,
+  getThorNetworkType,
+  HexStringSchema,
+  ThorAddressSchema,
+  thorErrorResponse,
+} from '@/services/thor'
+import type { VeChainTool } from '@/types'
 import { logger } from '@/utils/logger'
-import type { VeChainTool } from '../VeChainTool'
-import { getThorClient, getThorNetworkType } from './config'
-import { HexStringSchema, ThorAddressSchema } from './schemas'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema, thorErrorResponse } from './utils'
 
 /**
  * Schema for Thor account return data
