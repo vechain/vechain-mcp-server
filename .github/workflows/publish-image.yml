@@ -189,7 +189,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract Docker metadata (final tags)
-        id: meta_final
+        id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
@@ -203,7 +203,7 @@ jobs:
       - name: Create and push manifest lists
         shell: bash
         env:
-          TAGS: ${{ steps.meta_final.outputs.tags }}
+          TAGS: ${{ steps.meta.outputs.tags }}
           GH_IMAGE: ghcr.io/${{ github.repository }}
           ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
           SHA: ${{ github.sha }}
@@ -257,24 +257,32 @@ jobs:
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
           set -euo pipefail
-          delete_tag() {
+          delete_by_digest() {
             local tag="$1"
             for attempt in $(seq 1 10); do
-              echo "[ECR] Deleting tag: ${tag} (attempt ${attempt})"
-              aws ecr batch-delete-image --repository-name "$ECR_REPOSITORY" \
-                --image-ids imageTag="${tag}" >/dev/null 2>&1 || true
-              # verify
-              if ! aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
-                   --image-ids imageTag="${tag}" >/dev/null 2>&1; then
-                echo "[ECR] Tag ${tag} no longer present"
+              # Resolve digest for the tag
+              DIGEST=$(aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
+                --image-ids imageTag="${tag}" \
+                --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)
+              if [ -z "${DIGEST:-}" ] || [ "${DIGEST}" = "None" ]; then
+                echo "[ECR] Tag ${tag} not found (already gone)."
                 return 0
               fi
-              sleep 3
+              echo "[ECR] Deleting by digest for ${tag}: ${DIGEST} (attempt ${attempt})"
+              aws ecr batch-delete-image --repository-name "$ECR_REPOSITORY" \
+                --image-ids imageDigest="${DIGEST}" >/dev/null 2>&1 || true
+              # Verify the tag no longer resolves
+              if ! aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
+                   --image-ids imageTag="${tag}" >/dev/null 2>&1; then
+                echo "[ECR] ${tag} removed"
+                return 0
+              fi
+              sleep 5
             done
-            echo "[ECR] Warning: tag ${tag} still present after retries" >&2
+            echo "[ECR] Warning: ${tag} still present after retries" >&2
             return 0
           }
-          delete_tag "${SHA}-amd64"
-          delete_tag "${SHA}-arm64"
+          delete_by_digest "${SHA}-amd64"
+          delete_by_digest "${SHA}-arm64"
 
 
