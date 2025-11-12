@@ -2,8 +2,8 @@ import { z } from 'zod'
 import { logger } from '@/utils/logger'
 import type { VeChainTool } from '../VeChainTool'
 import { getThorClient, getThorNetworkType } from './config'
-import { ThorBlockRevisionSchema } from './ThorSchemas'
-import { thorErrorResponse } from './utils'
+import { ThorBlockRevisionSchema } from './schemas'
+import { createThorStructuredOutputSchema, createThorToolResponseSchema, thorErrorResponse } from './utils'
 
 /**
  * Schemas for get block tool outputs
@@ -12,8 +12,8 @@ import { thorErrorResponse } from './utils'
 // TODO: Define a schema for the compressed block
 const ThorBlockCompressedSchema = z.unknown()
 
-const ThorGetBlockOutputSchema = createThorStructuredOutputSchema(ThorBlockCompressedSchema.nullable())
-const ThorGetBlockResponseSchema = createThorToolResponseSchema(ThorBlockCompressedSchema.nullable())
+const ThorGetBlockOutputSchema = createThorStructuredOutputSchema(ThorBlockCompressedSchema)
+const ThorGetBlockResponseSchema = createThorToolResponseSchema(ThorBlockCompressedSchema)
 type ThorGetBlockResponse = z.infer<typeof ThorGetBlockResponseSchema>
 
 /**

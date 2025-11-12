@@ -4,8 +4,8 @@ import { z } from 'zod'
 import { logger } from '@/utils/logger'
 import type { VeChainTool } from '../VeChainTool'
 import { getThorClient, getThorNetworkType } from './config'
-import { HexStringSchema, ThorAddressSchema } from './ThorSchemas'
-import { thorErrorResponse } from './utils'
+import { HexStringSchema, ThorAddressSchema } from './schemas'
+import { createThorStructuredOutputSchema, createThorToolResponseSchema, thorErrorResponse } from './utils'
 
 /**
  * Schema for Thor account return data
@@ -17,8 +17,8 @@ const ThorAccountDataSchema = z.object({
   type: z.enum(['wallet', 'contract']).describe('The type of the account'),
 })
 
-const ThorGetAccountOutputSchema = createThorStructuredOutputSchema(ThorAccountDataSchema.nullable())
-const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema.nullable())
+const ThorGetAccountOutputSchema = createThorStructuredOutputSchema(ThorAccountDataSchema)
+const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema)
 type ThorGetAccountResponse = z.infer<typeof ThorGetAccountResponseSchema>
 
 /**

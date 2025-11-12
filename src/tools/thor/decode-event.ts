@@ -4,14 +4,14 @@ import { fetchAbiBySignature } from '@/services/b32'
 import { logger } from '@/utils/logger'
 import type { VeChainTool } from '../VeChainTool'
 import { getThorNetworkType } from './config'
-import { ThorDecodedEventSchema, ThorRawEventSchema } from './ThorSchemas'
-import { thorErrorResponse } from './utils'
+import { ThorDecodedEventSchema, ThorRawEventSchema } from './schemas'
+import { createThorStructuredOutputSchema, createThorToolResponseSchema, thorErrorResponse } from './utils'
 
 /**
  * Schemas for decode event tool outputs
  */
-const ThorDecodeEventOutputSchema = createThorStructuredOutputSchema(ThorDecodedEventSchema.nullable())
-const ThorDecodeEventResponseSchema = createThorToolResponseSchema(ThorDecodedEventSchema.nullable())
+const ThorDecodeEventOutputSchema = createThorStructuredOutputSchema(ThorDecodedEventSchema)
+const ThorDecodeEventResponseSchema = createThorToolResponseSchema(ThorDecodedEventSchema)
 type ThorDecodeEventResponse = z.infer<typeof ThorDecodeEventResponseSchema>
 
 /**
