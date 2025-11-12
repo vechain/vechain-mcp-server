@@ -123,7 +123,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
 
-      - name: Set up QEMU
+      - name: Set up QEMU # NOTE: Delete this step if the repo becomes public and we use an arm runner
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
