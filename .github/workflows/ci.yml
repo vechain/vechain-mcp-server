@@ -6,7 +6,7 @@ permissions:
 on:
   push:
     branches:
-      - main
+      - miguel/chore/dockerfile
   pull_request:
     branches:
       - main
