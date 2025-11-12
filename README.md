@@ -123,6 +123,44 @@ Example configuration for testnet:
 }
 ```
 
+## Run with Docker
+
+Prerequisite: Docker 20+.
+
+1) Pull the multi‑arch image (amd64/arm64):
+
+```bash
+docker pull ghcr.io/vechain/vechain-mcp-server:latest
+```
+
+2) Run the HTTP server:
+
+```bash
+docker run -d --rm \
+  -p 4000:4000 \
+  -e VECHAIN_NETWORK=mainnet \ # mainnet | testnet | solo
+  --name vechain-mcp \
+  ghcr.io/vechain/vechain-mcp-server:latest
+```
+
+3) Verify:
+
+```bash
+curl -fsS http://localhost:4000/health
+```
+
+4) List MCP tools (optional check):
+
+```bash
+curl -sS -m 10 -X POST http://localhost:4000/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
+```
+
+Notes:
+- MCP endpoint: `POST /mcp` (Content-Type: application/json, Accept: application/json, text/event-stream).
+
 ## Setup locally
 
 ```bash
