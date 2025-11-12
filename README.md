@@ -68,7 +68,7 @@ The easiest way to use the VeChain MCP server is to install it directly from npm
   "mcpServers": {
     "vechain": {
       "command": "npx",
-      "args": ["-y", "@vechain/mcp-server"],
+      "args": ["-y", "@vechain/mcp-server@latest"],
       "env": {
         "VECHAIN_NETWORK": "mainnet"
       }
@@ -83,11 +83,21 @@ The easiest way to use the VeChain MCP server is to install it directly from npm
 
 1. Open Cursor Settings:
    - Press `Cmd/Ctrl + Shift + P`
+
    - Type "Open MCP Settings" and select it
 
 2. Add the VeChain server configuration (same JSON as above)
 
 3. Restart Cursor
+
+#### For Claude Code
+
+1. Locate your Claude Code configuration file:
+   - Create or edit `~/.claude/mcp.json`
+
+2. Add the VeChain server configuration (same JSON as above)
+
+3. Restart Claude Code
 
 ### 2. Verify Installation
 
@@ -159,47 +169,87 @@ curl -sS -m 10 -X POST http://localhost:4000/mcp \
 ```
 
 Notes:
-- MCP endpoint: `POST /mcp` (Content-Type: application/json, Accept: application/json, text/event-stream).
+* MCP endpoint: `POST /mcp` (Content-Type: application/json, Accept: application/json, text/event-stream).
+-
 
-## Setup locally
+## Local Development Setup
+
+If you want to contribute to the VeChain MCP server or test local changes, follow these instructions.
+
+### Prerequisites for Development
+
+* Node.js 18.x or higher
+* npm or yarn package manager
+* Git
+
+### Setup Steps
+
+1. **Clone the repository**:
 
 ```bash
-# Install dependencies
+git clone https://github.com/vechain/vechain-mcp-server.git
+cd vechain-mcp-server
+```
+
+2. **Install dependencies**:
+
+```bash
 npm install
 ```
 
-1. Build the project:
+3. **Build the project**:
 
 ```bash
 npm run build
 ```
 
-2. Add the following to your config file:
+### Development Modes
+
+#### Option 1: STDIO Mode (Production-like)
+
+Use this mode to test the server as it would run in production (via stdin/stdout).
+
+1. Build the project (if not already done):
+
+```bash
+npm run build
+```
+
+2. Configure your MCP client to use the local build:
 
 ```json
 {
   "mcpServers": {
     "vechain-local": {
       "command": "node",
-      "args": [
-        "/absolute/path/to/vechain-mcp-server/dist/stdio.js"
-      ]
+      "args": ["/absolute/path/to/vechain-mcp-server/dist/stdio.js"],
+      "env": {
+        "VECHAIN_NETWORK": "testnet"
+      }
     }
   }
 }
 ```
 
-> 💡 Configured automatically for Cursor and Claude code
+Replace `/absolute/path/to/vechain-mcp-server` with the actual path to your cloned repository.
 
-## Development (works with Cursor)
+3. Restart your MCP client
 
-In development mode, just run
+> **Note**: For Claude Code and Cursor, the local configuration is already set up in `.claude/mcp.json` and `.cursor/mcp.json` respectively.
+
+#### Option 2: HTTP Mode with Hot Reload (Active Development)
+
+Use this mode when actively developing - it automatically reloads on file changes.
+
+1. Start the development server:
 
 ```bash
 npm run dev
 ```
 
-and use the `vechain-local-dev` server below. It will watch file changes
+This starts an HTTP server on `http://localhost:4000/mcp` with file watching enabled.
+
+2. Configure your MCP client to connect via HTTP:
 
 ```json
 {
@@ -211,21 +261,48 @@ and use the `vechain-local-dev` server below. It will watch file changes
 }
 ```
 
-### MCP Inspector (Development)
+3. Restart your MCP client
+
+Now any changes you make to the source code will automatically reload the server.
+
+> **Note**: This HTTP mode currently works with Cursor and other clients that support HTTP transport. Claude Desktop may have limited support for HTTP-based MCP servers.
+
+### Testing Your Changes
+
+#### Using MCP Inspector
+
+The MCP Inspector provides a web UI to test your MCP tools interactively:
 
 ```bash
 npm run inspect
 ```
 
-### Run Tests
+This opens a browser interface where you can test individual tools and see their responses.
+
+#### Running Automated Tests
+
+1. Build and start the server:
 
 ```bash
 npm run build
 npm run start
 ```
 
-then in a second terminal:
+2. In a separate terminal, run the test suite:
 
 ```bash
 npm run test
 ```
+
+### Code Quality
+
+Format and lint your code before committing:
+
+```bash
+npm run format  # Format code with Biome
+npm run lint    # Lint and fix issues with Biome
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
