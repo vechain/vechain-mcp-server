@@ -196,7 +196,7 @@ jobs:
             ghcr.io/${{ github.repository }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/miguel/chore/dockerfile' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=${{ github.sha }}
             type=ref,event=branch
 
