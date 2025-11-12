@@ -65,11 +65,30 @@ jobs:
           docker logs vechain-mcp-ci || true
           exit 1
 
+      - name: Wait for MCP readiness (tools/list)
+        shell: bash
+        run: |
+          set -e
+          for i in {1..60}; do
+            RESPONSE=$(curl -sS -m 10 -X POST http://localhost:4000/mcp \
+              -H 'Content-Type: application/json' \
+              -H 'Accept: application/json, text/event-stream' \
+              -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}' || true)
+            if echo "$RESPONSE" | jq -e '.result.tools | any(.name == "thorGetBlock")' >/dev/null 2>&1; then
+              echo "MCP tools ready"
+              exit 0
+            fi
+            echo "Waiting for MCP tools... ($i)"
+            sleep 2
+          done
+          echo "MCP tools not ready in time"
+          exit 1
+
       - name: Integration check - thorGetBlock 1000
         shell: bash
         run: |
           set -euo pipefail
-          RESPONSE=$(curl -s -X POST http://localhost:4000/mcp \
+          RESPONSE=$(curl -s --max-time 60 -X POST http://localhost:4000/mcp \
             -H 'Content-Type: application/json' \
             -H 'Accept: application/json, text/event-stream' \
             -d '{
