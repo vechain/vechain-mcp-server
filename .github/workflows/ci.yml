@@ -30,6 +30,10 @@ jobs:
     name: Publish image
     needs: [test]
     uses: ./.github/workflows/publish-image.yml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     secrets: inherit
 
 
