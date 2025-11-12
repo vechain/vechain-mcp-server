@@ -2,17 +2,16 @@
 FROM node:24-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
-RUN npm prune --omit=dev
 
 # Runtime
 FROM node:24-slim AS runner
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
+RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 
 ENV PORT=4000
