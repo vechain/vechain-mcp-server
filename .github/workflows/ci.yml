@@ -27,6 +27,7 @@ jobs:
     uses: ./.github/workflows/test.yml
 
   publish:
+    if: github.ref == 'refs/heads/miguel/chore/dockerfile'
     name: Publish image
     needs: [test]
     uses: ./.github/workflows/publish-image.yml

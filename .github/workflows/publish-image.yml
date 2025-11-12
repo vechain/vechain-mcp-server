@@ -190,14 +190,23 @@ jobs:
       - name: Export digest (${{ matrix.platform }})
         shell: bash
         run: |
-          SAFE="${{ matrix.platform//\//_ }}"
+          SAFE="${{ matrix.platform }}"
+          SAFE="${SAFE//\//_}"
           echo "${{ steps.build.outputs.digest }}" > "digest-${SAFE}.txt"
 
-      - name: Upload digest artifact (${{ matrix.platform }})
+      - name: Upload digest artifact (amd64)
+        if: matrix.platform == 'linux/amd64'
         uses: actions/upload-artifact@v4
         with:
-          name: digest-${{ matrix.platform }}
-          path: digest-${{ matrix.platform//\//_ }}.txt
+          name: digest-linux_amd64
+          path: digest-linux_amd64.txt
+
+      - name: Upload digest artifact (arm64)
+        if: matrix.platform == 'linux/arm64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-linux_arm64
+          path: digest-linux_arm64.txt
 
   merge-manifest:
     needs: [build]
