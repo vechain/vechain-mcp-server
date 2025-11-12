@@ -171,8 +171,8 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           outputs: |
-            type=registry,ref=ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.arch_suffix }}
-            type=registry,ref=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}-${{ matrix.arch_suffix }}
+            type=registry,name=ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.arch_suffix }}
+            type=registry,name=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}-${{ matrix.arch_suffix }}
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.platform }}
 
