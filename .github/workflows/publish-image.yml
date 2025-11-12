@@ -8,14 +8,11 @@ env:
   ECR_REPOSITORY: mcp-server
 
 jobs:
-  build-and-push:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
@@ -87,7 +84,6 @@ jobs:
               "params":{"name":"thorGetBlock","arguments":{"blockRevision":"1000"}}
             }')
           echo "$RESPONSE" | jq .
-          # Minimal and stable assertions
           echo "$RESPONSE" | jq -e '.result.structuredContent.ok == true'
           echo "$RESPONSE" | jq -e '.result.structuredContent.network == "mainnet"'
           echo "$RESPONSE" | jq -e '.result.structuredContent.data.number == 1000'
@@ -110,6 +106,26 @@ jobs:
         if: always()
         run: docker stop vechain-mcp-ci || true
 
+  build:
+    needs: [validate]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs_on: ubuntu-latest
+            platform: linux/amd64
+            arch_suffix: amd64
+          - runs_on: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch_suffix: arm64
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -125,6 +141,13 @@ jobs:
           aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" >/dev/null 2>&1 || \
           aws ecr create-repository --repository-name "$ECR_REPOSITORY" >/dev/null
 
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -137,6 +160,65 @@ jobs:
             type=raw,value=${{ github.sha }}
             type=ref,event=branch
 
+      - name: Compute arch-suffixed tags
+        id: tags
+        shell: bash
+        env:
+          META_TAGS: ${{ steps.meta.outputs.tags }}
+          ARCH: ${{ matrix.arch_suffix }}
+        run: |
+          set -euo pipefail
+          TMP_FILE="$(mktemp)"
+          printf '%s\n' "${META_TAGS}" | awk -v a="$ARCH" 'NF{print $0 "-" a}' > "$TMP_FILE"
+          echo "tags<<EOF" >> "$GITHUB_OUTPUT"
+          cat "$TMP_FILE" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          rm -f "$TMP_FILE"
+
+      - name: Build and push (${{ matrix.platform }})
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: ${{ matrix.platform }}
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.platform }}
+
+      - name: Export digest (${{ matrix.platform }})
+        shell: bash
+        run: |
+          SAFE="${{ matrix.platform//\//_ }}"
+          echo "${{ steps.build.outputs.digest }}" > "digest-${SAFE}.txt"
+
+      - name: Upload digest artifact (${{ matrix.platform }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.platform }}
+          path: digest-${{ matrix.platform//\//_ }}.txt
+
+  merge-manifest:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Login to GHCR
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
         with:
@@ -144,15 +226,50 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push (multi-registry)
-        uses: docker/build-push-action@v5
+      - name: Extract Docker metadata (final tags)
+        id: meta_final
+        uses: docker/metadata-action@v5
         with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ github.ref_name }}
-          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ github.sha }}
+            type=ref,event=branch
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: ./digests
+          merge-multiple: true
+
+      - name: Create and push manifest lists
+        shell: bash
+        env:
+          TAGS: ${{ steps.meta_final.outputs.tags }}
+          GH_IMAGE: ghcr.io/${{ github.repository }}
+          ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          AMD64_DIGEST=$(cat digests/digest-linux_amd64.txt)
+          ARM64_DIGEST=$(cat digests/digest-linux_arm64.txt)
+          for image in "${GH_IMAGE}" "${ECR_IMAGE}"; do
+            [ -z "$image" ] && continue
+            TAG_ARGS=""
+            while IFS= read -r tag; do
+              [ -z "$tag" ] && continue
+              if [[ "$tag" == "${image}:"* ]]; then
+                TAG_ARGS="$TAG_ARGS -t $tag"
+              fi
+            done <<< "$TAGS"
+            if [ -n "$TAG_ARGS" ]; then
+              docker buildx imagetools create \
+                $TAG_ARGS \
+                "${image}@${AMD64_DIGEST}" \
+                "${image}@${ARM64_DIGEST}"
+            fi
+          done
 
 
