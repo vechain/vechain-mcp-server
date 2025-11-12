@@ -1,5 +1,5 @@
 # Build
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -8,7 +8,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 # Runtime
-FROM node:20-slim AS runner
+FROM node:24-slim AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=builder /app/package*.json ./
