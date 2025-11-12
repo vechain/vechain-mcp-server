@@ -4,6 +4,11 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
 env:
   ECR_REPOSITORY: mcp-server
 
