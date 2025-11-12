@@ -1,14 +1,15 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
+
 import { upstreamClients } from '@/server'
-import type { VeChainTool } from '@/types'
+import type { MCPTool } from '@/types'
 import { UpstreamServerName } from '@/upstream-servers'
 import { logger } from '@/utils/logger'
 
 /**
  * Tool for searching VeChain documentation
  */
-export const searchDocsVechain: VeChainTool = {
+export const searchDocsVechain: MCPTool = {
   name: 'searchDocsVechain',
   title: 'Search VeChain Documentation',
   description: 'Search the VeChain documentation',
@@ -30,7 +31,7 @@ export const searchDocsVechain: VeChainTool = {
 /**
  * Tool for searching VeChainKit documentation
  */
-export const searchDocsVechainKit: VeChainTool = {
+export const searchDocsVechainKit: MCPTool = {
   name: 'searchDocsVechainKit',
   title: 'Search VeChain Kit Documentation',
   description: 'Search the VeChain Kit documentation',
@@ -52,7 +53,7 @@ export const searchDocsVechainKit: VeChainTool = {
 /**
  * Tool for searching VeBetterDao documentation
  */
-export const searchDocsVebetterDao: VeChainTool = {
+export const searchDocsVebetterDao: MCPTool = {
   name: 'searchDocsVebetterDao',
   title: 'Search VeBetterDao Documentation',
   description: 'Search the VeBetterDao documentation',
@@ -74,7 +75,7 @@ export const searchDocsVebetterDao: VeChainTool = {
 /**
  * Tool for searching VeVote documentation
  */
-export const searchDocsVevote: VeChainTool = {
+export const searchDocsVevote: MCPTool = {
   name: 'searchDocsVevote',
   title: 'Search VeVote Documentation',
   description: 'Search the VeVote documentation',
@@ -96,7 +97,7 @@ export const searchDocsVevote: VeChainTool = {
 /**
  * Tool for searching Stargate documentation
  */
-export const searchDocsStargate: VeChainTool = {
+export const searchDocsStargate: MCPTool = {
   name: 'searchDocsStargate',
   title: 'Search Stargate Documentation',
   description: 'Search the Stargate documentation',

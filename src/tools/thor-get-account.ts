@@ -10,7 +10,7 @@ import {
   ThorAddressSchema,
   thorErrorResponse,
 } from '@/services/thor'
-import type { VeChainTool } from '@/types'
+import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
 /**
@@ -30,7 +30,7 @@ type ThorGetAccountResponse = z.infer<typeof ThorGetAccountResponseSchema>
 /**
  * Tool for getting account details from Thor network
  */
-export const getAccount: VeChainTool = {
+export const getAccount: MCPTool = {
   name: 'thorGetAccount',
   title: 'Thor Get Account',
   description: 'Get account details from Thor network',

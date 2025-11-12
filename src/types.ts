@@ -5,7 +5,7 @@ import type { z } from 'zod'
 /**
  * Interface for tools for auto discovery and registering
  */
-export interface VeChainTool {
+export interface MCPTool {
   name: string
   title: string
   description: string

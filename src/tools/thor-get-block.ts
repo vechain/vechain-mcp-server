@@ -8,7 +8,7 @@ import {
   ThorBlockRevisionSchema,
   thorErrorResponse,
 } from '@/services/thor'
-import type { VeChainTool } from '@/types'
+import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
 /**
@@ -21,7 +21,7 @@ type ThorGetBlockResponse = z.infer<typeof ThorGetBlockResponseSchema>
 /**
  * Tool for getting block details from Thor network
  */
-export const getBlock: VeChainTool = {
+export const getBlock: MCPTool = {
   name: 'thorGetBlock',
   title: 'Thor Get Block',
   description: 'Get block details from Thor network',

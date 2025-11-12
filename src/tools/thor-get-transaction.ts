@@ -8,7 +8,7 @@ import {
   ThorTransactionSchema,
   thorErrorResponse,
 } from '@/services/thor'
-import type { VeChainTool } from '@/types'
+import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
 /**
@@ -22,7 +22,7 @@ type ThorGetTransactionResponse = z.infer<typeof ThorGetTransactionResponseSchem
 /**
  * Tool for getting transaction details from Thor network
  */
-export const getTransaction: VeChainTool = {
+export const getTransaction: MCPTool = {
   name: 'thorGetTransaction',
   title: 'Thor Get Transaction',
   description: 'Get transaction details from Thor network',

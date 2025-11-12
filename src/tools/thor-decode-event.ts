@@ -9,7 +9,7 @@ import {
   ThorRawEventSchema,
   thorErrorResponse,
 } from '@/services/thor'
-import type { VeChainTool } from '@/types'
+import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
 /**
@@ -22,7 +22,7 @@ type ThorDecodeEventResponse = z.infer<typeof ThorDecodeEventResponseSchema>
 /**
  * Tool for decoding an event emitted by a contract on Thor network
  */
-export const decodeEvent: VeChainTool = {
+export const decodeEvent: MCPTool = {
   name: 'thorDecodeEvent',
   title: 'Thor Decode Event',
   description: 'Decode an event emitted by a contract on Thor network',
