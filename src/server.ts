@@ -1,10 +1,10 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import { initThor } from './config/network'
-import * as tools from './tools'
+import * as tools from '@/tools'
+import { initThor } from '@/tools/thor/config'
+import { logger } from '@/utils/logger'
 import { connectAllUpstreamServers, type UpstreamClients } from './upstream-servers'
-import { logger } from './utils/logger'
 
 export const server = new McpServer({
   name: 'vechain-mcp-server',

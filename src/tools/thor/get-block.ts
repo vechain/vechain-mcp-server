@@ -1,8 +1,7 @@
 import { z } from 'zod'
-import { getThorClient, getThorNetworkType } from '../../config/network'
-import { logger } from '../../utils/logger'
+import { logger } from '@/utils/logger'
 import type { VeChainTool } from '../VeChainTool'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
+import { getThorClient, getThorNetworkType } from './config'
 import { ThorBlockRevisionSchema } from './ThorSchemas'
 import { thorErrorResponse } from './utils'
 

@@ -1,5 +1,5 @@
-import { getThorNetworkType } from '../../config/network'
-import { logger } from '../../utils/logger'
+import { logger } from '@/utils/logger'
+import { getThorNetworkType } from './config'
 
 /**
  * Create a Thor tool response with an error message

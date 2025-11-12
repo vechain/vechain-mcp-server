@@ -1,10 +1,9 @@
 import { ABIEvent, Hex } from '@vechain/sdk-core'
 import type { z } from 'zod'
-import { getThorNetworkType } from '../../config/network'
-import { fetchAbiBySignature } from '../../services/b32'
-import { logger } from '../../utils/logger'
+import { fetchAbiBySignature } from '@/services/b32'
+import { logger } from '@/utils/logger'
 import type { VeChainTool } from '../VeChainTool'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
+import { getThorNetworkType } from './config'
 import { ThorDecodedEventSchema, ThorRawEventSchema } from './ThorSchemas'
 import { thorErrorResponse } from './utils'
 
