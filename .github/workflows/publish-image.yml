@@ -226,4 +226,55 @@ jobs:
             fi
           done
 
+      - name: Cleanup arch tags in GHCR
+        shell: bash
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          PACKAGE_NAME="${REPOSITORY#*/}"
+          API_BASE="https://api.github.com"
+          LIST_URL="${API_BASE}/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions?per_page=100"
+          DELETE_BASE="${API_BASE}/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions"
+          RESP=$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+                 -H "Accept: application/vnd.github+json" \
+                 "$LIST_URL" || true)
+          [ -z "$RESP" ] && exit 0
+          IDS=$(echo "$RESP" | jq -r --arg t1 "${SHA}-amd64" --arg t2 "${SHA}-arm64" '.[] | select((.metadata.container.tags // []) | index($t1) or index($t2)) | .id')
+          for id in $IDS; do
+            curl -fsS -X DELETE -H "Authorization: Bearer ${GH_TOKEN}" \
+                 -H "Accept: application/vnd.github+json" \
+                 "${DELETE_BASE}/${id}" || true
+          done
+
+      - name: Cleanup arch tags in ECR
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          delete_tag() {
+            local tag="$1"
+            for attempt in $(seq 1 10); do
+              echo "[ECR] Deleting tag: ${tag} (attempt ${attempt})"
+              aws ecr batch-delete-image --repository-name "$ECR_REPOSITORY" \
+                --image-ids imageTag="${tag}" >/dev/null 2>&1 || true
+              # verify
+              if ! aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
+                   --image-ids imageTag="${tag}" >/dev/null 2>&1; then
+                echo "[ECR] Tag ${tag} no longer present"
+                return 0
+              fi
+              sleep 3
+            done
+            echo "[ECR] Warning: tag ${tag} still present after retries" >&2
+            return 0
+          }
+          delete_tag "${SHA}-amd64"
+          delete_tag "${SHA}-arm64"
+
 
