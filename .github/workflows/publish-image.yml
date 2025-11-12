@@ -151,18 +151,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/${{ github.repository }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
-          tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ github.sha }}
-            type=ref,event=branch
-
       - name: Build and push (${{ matrix.platform }})
         id: build
         uses: docker/build-push-action@v5
@@ -176,34 +164,10 @@ jobs:
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.platform }}
 
-      - name: Export digest (${{ matrix.platform }})
-        shell: bash
-        run: |
-          SAFE="${{ matrix.platform }}"
-          SAFE="${SAFE//\//_}"
-          echo "${{ steps.build.outputs.digest }}" > "digest-${SAFE}.txt"
-
-      - name: Upload digest artifact (amd64)
-        if: matrix.platform == 'linux/amd64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: digest-linux_amd64
-          path: digest-linux_amd64.txt
-
-      - name: Upload digest artifact (arm64)
-        if: matrix.platform == 'linux/arm64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: digest-linux_arm64
-          path: digest-linux_arm64.txt
-
   merge-manifest:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
@@ -232,16 +196,9 @@ jobs:
             ghcr.io/${{ github.repository }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/miguel/chore/dockerfile' }}
             type=raw,value=${{ github.sha }}
             type=ref,event=branch
-
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          pattern: digest-*
-          path: ./digests
-          merge-multiple: true
 
       - name: Create and push manifest lists
         shell: bash
@@ -249,10 +206,9 @@ jobs:
           TAGS: ${{ steps.meta_final.outputs.tags }}
           GH_IMAGE: ghcr.io/${{ github.repository }}
           ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          AMD64_DIGEST=$(cat digests/digest-linux_amd64.txt)
-          ARM64_DIGEST=$(cat digests/digest-linux_arm64.txt)
           for image in "${GH_IMAGE}" "${ECR_IMAGE}"; do
             [ -z "$image" ] && continue
             TAG_ARGS=""
@@ -265,8 +221,8 @@ jobs:
             if [ -n "$TAG_ARGS" ]; then
               docker buildx imagetools create \
                 $TAG_ARGS \
-                "${image}@${AMD64_DIGEST}" \
-                "${image}@${ARM64_DIGEST}"
+                "${image}:${SHA}-amd64" \
+                "${image}:${SHA}-arm64"
             fi
           done
 
