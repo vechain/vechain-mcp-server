@@ -257,32 +257,37 @@ jobs:
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
           set -euo pipefail
-          delete_by_digest() {
-            local tag="$1"
-            for attempt in $(seq 1 10); do
-              # Resolve digest for the tag
-              DIGEST=$(aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
-                --image-ids imageTag="${tag}" \
-                --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)
-              if [ -z "${DIGEST:-}" ] || [ "${DIGEST}" = "None" ]; then
-                echo "[ECR] Tag ${tag} not found (already gone)."
-                return 0
-              fi
-              echo "[ECR] Deleting by digest for ${tag}: ${DIGEST} (attempt ${attempt})"
-              aws ecr batch-delete-image --repository-name "$ECR_REPOSITORY" \
-                --image-ids imageDigest="${DIGEST}" >/dev/null 2>&1 || true
-              # Verify the tag no longer resolves
-              if ! aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
-                   --image-ids imageTag="${tag}" >/dev/null 2>&1; then
-                echo "[ECR] ${tag} removed"
-                return 0
-              fi
-              sleep 5
+          TARGET1="${SHA}-amd64"
+          TARGET2="${SHA}-arm64"
+
+          delete_targets() {
+            local tag
+            for tag in "$@"; do
+              for attempt in $(seq 1 10); do
+                echo "[ECR] Resolving digest for tag: ${tag} (attempt ${attempt})"
+                # Fetch all image details once to avoid API shape issues
+                DETAILS=$(aws ecr describe-images --repository-name "$ECR_REPOSITORY" --output json || true)
+                DIGEST=$(echo "$DETAILS" | jq -r --arg tag "$tag" '
+                  .imageDetails[]? | select(.imageTags // [] | index($tag)) | .imageDigest // empty' | head -n1)
+                if [ -z "${DIGEST:-}" ]; then
+                  echo "[ECR] Tag ${tag} not found in describe-images (may be eventually consistent)."
+                else
+                  echo "[ECR] Deleting by digest ${DIGEST} for tag ${tag}"
+                  aws ecr batch-delete-image --repository-name "$ECR_REPOSITORY" \
+                    --image-ids imageDigest="${DIGEST}" >/dev/null 2>&1 || true
+                fi
+
+                # Verify disappearance of the tag
+                if ! aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
+                     --image-ids imageTag="${tag}" >/dev/null 2>&1; then
+                  echo "[ECR] ${tag} removed"
+                  break
+                fi
+                sleep 5
+              done
             done
-            echo "[ECR] Warning: ${tag} still present after retries" >&2
-            return 0
           }
-          delete_by_digest "${SHA}-amd64"
-          delete_by_digest "${SHA}-arm64"
+
+          delete_targets "$TARGET1" "$TARGET2"
 
 
