@@ -176,21 +176,12 @@ jobs:
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.platform }}
 
-      - name: Resolve digest (${{ matrix.platform }})
-        id: digest
-        shell: bash
-        run: |
-          set -euo pipefail
-          REF="ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.arch_suffix }}"
-          DIGEST=$(docker buildx imagetools inspect "$REF" --format '{{json .}}' | jq -r '.digest // .manifests[0].digest')
-          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
-
       - name: Export digest (${{ matrix.platform }})
         shell: bash
         run: |
           SAFE="${{ matrix.platform }}"
           SAFE="${SAFE//\//_}"
-          echo "${{ steps.digest.outputs.digest }}" > "digest-${SAFE}.txt"
+          echo "${{ steps.build.outputs.digest }}" > "digest-${SAFE}.txt"
 
       - name: Upload digest artifact (amd64)
         if: matrix.platform == 'linux/amd64'
