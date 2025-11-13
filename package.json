@@ -26,7 +26,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "tsx --watch src/http.ts",
+    "dev": "LOG_LEVEL=0 tsx --watch src/http.ts",
     "start": "node dist/http.js",
     "format": "biome format --write",
     "lint": "biome lint --write",

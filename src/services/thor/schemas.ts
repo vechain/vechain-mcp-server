@@ -12,6 +12,15 @@ export const ThorBlockRevisionSchema = z
   )
   .describe('The block number, label or id to retrieve')
 
+export const ThorBlockIdSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]{64}$/, {
+    message: 'Must be a valid block ID (64 hex characters)',
+  })
+  .describe('The block ID to retrieve') as z.ZodType<`0x${string}`>
+
+export const ThorBlockNumberSchema = z.number().describe('The block number to retrieve')
+
 // TODO: Define a schema for the compressed block
 export const ThorBlockCompressedSchema = z.unknown()
 

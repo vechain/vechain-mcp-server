@@ -1,3 +1,4 @@
+export { getTransfersOfAccount } from './get-transfers-of-account'
 export {
   searchDocsStargate,
   searchDocsVebetterDao,
