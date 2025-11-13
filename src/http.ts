@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import express from 'express'
 import { cleanupServer, initServer, server } from './server'
