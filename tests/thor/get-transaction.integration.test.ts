@@ -4,16 +4,23 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 describe('Thor Get Transaction', () => {
   let client: Client
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     client = new Client({
       name: 'thor-get-transaction-client',
       version: '1.0.0',
     })
-    const transport = new StreamableHTTPClientTransport(new URL('http://localhost:4000/mcp'))
+    const transport = new StreamableHTTPClientTransport(new URL('http://localhost:4000/mcp'), {
+      reconnectionOptions: {
+        maxReconnectionDelay: 1000,
+        initialReconnectionDelay: 100,
+        reconnectionDelayGrowFactor: 1.5,
+        maxRetries: 0,
+      },
+    })
     await client.connect(transport)
   })
 
-  afterEach(async () => {
+  afterAll(async () => {
     await client.close()
   })
 

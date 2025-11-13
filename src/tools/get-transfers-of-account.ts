@@ -3,7 +3,7 @@ import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetTransfersParamsBaseSchema,
-  IndexerGetTransfersParamsSchema,
+  type IndexerGetTransfersParamsSchema,
   IndexerTransferSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -40,7 +40,7 @@ export const getTransfersOfAccount: MCPTool = {
     try {
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
-        params: IndexerGetTransfersParamsSchema.parse(params),
+        params,
       })
 
       if (!response?.data) {
