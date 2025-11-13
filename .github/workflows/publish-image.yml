@@ -1,0 +1,298 @@
+name: Publish Docker image
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  ECR_REPOSITORY: mcp-server
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Build image for local test (amd64, load into Docker)
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: vechain-mcp-server:ci-test
+          no-cache: true
+
+      - name: Run container (background) for integration test
+        run: |
+          docker run -d --rm \
+            -p 4000:4000 \
+            -e VECHAIN_NETWORK=mainnet \
+            --name vechain-mcp-ci \
+            vechain-mcp-server:ci-test
+
+      - name: Wait for health endpoint
+        shell: bash
+        run: |
+          set -e
+          for i in {1..60}; do
+            if curl -fsS http://localhost:4000/health >/dev/null; then
+              echo "Health OK"
+              exit 0
+            fi
+            echo "Waiting for server... ($i)"
+            sleep 2
+          done
+          echo "Server failed to become healthy in time"
+          docker logs vechain-mcp-ci || true
+          exit 1
+
+      - name: Wait for MCP readiness (tools/list)
+        shell: bash
+        run: |
+          set -e
+          for i in {1..60}; do
+            RESPONSE=$(curl -sS -m 10 -X POST http://localhost:4000/mcp \
+              -H 'Content-Type: application/json' \
+              -H 'Accept: application/json, text/event-stream' \
+              -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}' || true)
+            if echo "$RESPONSE" | jq -e '.result.tools | any(.name == "thorGetBlock")' >/dev/null 2>&1; then
+              echo "MCP tools ready"
+              exit 0
+            fi
+            echo "Waiting for MCP tools... ($i)"
+            sleep 2
+          done
+          echo "MCP tools not ready in time"
+          exit 1
+
+      - name: Integration check - thorGetBlock 1000
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -s --max-time 60 -X POST http://localhost:4000/mcp \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            -d '{
+              "jsonrpc":"2.0",
+              "id":"1",
+              "method":"tools/call",
+              "params":{"name":"thorGetBlock","arguments":{"blockRevision":"1000"}}
+            }')
+          echo "$RESPONSE" | jq .
+          echo "$RESPONSE" | jq -e '.result.structuredContent.ok == true'
+          echo "$RESPONSE" | jq -e '.result.structuredContent.network == "mainnet"'
+          echo "$RESPONSE" | jq -e '.result.structuredContent.data.number == 1000'
+          echo "$RESPONSE" | jq -e '.result.structuredContent.data.id == "0x000003e80b3aca03fe03a742d0cd07b1260b42923c56b1032028e348d4da3188"'
+
+      - name: Run vulnerability scan
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        with:
+          image-ref: vechain-mcp-server:ci-test
+          format: 'table'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+          scanners: 'misconfig,vuln,secret'
+          exit-code: '1'
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2
+
+      - name: Stop test container
+        if: always()
+        run: docker stop vechain-mcp-ci || true
+
+  build:
+    needs: [validate]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs_on: ubuntu-latest
+            platform: linux/amd64
+            arch_suffix: amd64
+          - runs_on: ubuntu-latest # NOTE: If the repo becomes public replace this by an arm runner (like ubuntu-24.04-arm)
+            platform: linux/arm64
+            arch_suffix: arm64
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Set up QEMU # NOTE: Delete this step if the repo becomes public and we use an arm runner
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure ECR repository exists
+        run: |
+          aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" >/dev/null 2>&1 || \
+          aws ecr create-repository --repository-name "$ECR_REPOSITORY" >/dev/null
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (${{ matrix.platform }})
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: ${{ matrix.platform }}
+          outputs: |
+            type=registry,name=ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.arch_suffix }}
+            type=registry,name=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}-${{ matrix.arch_suffix }}
+          cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.platform }}
+
+  merge-manifest:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (final tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ github.sha }}
+            type=ref,event=branch
+
+      - name: Create and push manifest lists
+        shell: bash
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          GH_IMAGE: ghcr.io/${{ github.repository }}
+          ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for image in "${GH_IMAGE}" "${ECR_IMAGE}"; do
+            [ -z "$image" ] && continue
+            TAG_ARGS=""
+            while IFS= read -r tag; do
+              [ -z "$tag" ] && continue
+              if [[ "$tag" == "${image}:"* ]]; then
+                TAG_ARGS="$TAG_ARGS -t $tag"
+              fi
+            done <<< "$TAGS"
+            if [ -n "$TAG_ARGS" ]; then
+              docker buildx imagetools create \
+                $TAG_ARGS \
+                "${image}:${SHA}-amd64" \
+                "${image}:${SHA}-arm64"
+            fi
+          done
+
+      - name: Cleanup arch tags in GHCR
+        shell: bash
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          PACKAGE_NAME="${REPOSITORY#*/}"
+          API_BASE="https://api.github.com"
+          LIST_URL="${API_BASE}/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions?per_page=100"
+          DELETE_BASE="${API_BASE}/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions"
+          RESP=$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+                 -H "Accept: application/vnd.github+json" \
+                 "$LIST_URL" || true)
+          [ -z "$RESP" ] && exit 0
+          IDS=$(echo "$RESP" | jq -r --arg t1 "${SHA}-amd64" --arg t2 "${SHA}-arm64" '.[] | select((.metadata.container.tags // []) | index($t1) or index($t2)) | .id')
+          for id in $IDS; do
+            curl -fsS -X DELETE -H "Authorization: Bearer ${GH_TOKEN}" \
+                 -H "Accept: application/vnd.github+json" \
+                 "${DELETE_BASE}/${id}" || true
+          done
+
+      - name: Cleanup arch tags in ECR
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          TARGET1="${SHA}-amd64"
+          TARGET2="${SHA}-arm64"
+
+          delete_targets() {
+            local tag
+            for tag in "$@"; do
+              for attempt in $(seq 1 10); do
+                echo "[ECR] Resolving digest for tag: ${tag} (attempt ${attempt})"
+                # Fetch all image details once to avoid API shape issues
+                DETAILS=$(aws ecr describe-images --repository-name "$ECR_REPOSITORY" --output json || true)
+                DIGEST=$(echo "$DETAILS" | jq -r --arg tag "$tag" '
+                  .imageDetails[]? | select(.imageTags // [] | index($tag)) | .imageDigest // empty' | head -n1)
+                if [ -z "${DIGEST:-}" ]; then
+                  echo "[ECR] Tag ${tag} not found in describe-images (may be eventually consistent)."
+                else
+                  echo "[ECR] Deleting by digest ${DIGEST} for tag ${tag}"
+                  aws ecr batch-delete-image --repository-name "$ECR_REPOSITORY" \
+                    --image-ids imageDigest="${DIGEST}" >/dev/null 2>&1 || true
+                fi
+
+                # Verify disappearance of the tag
+                if ! aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
+                     --image-ids imageTag="${tag}" >/dev/null 2>&1; then
+                  echo "[ECR] ${tag} removed"
+                  break
+                fi
+                sleep 5
+              done
+            done
+          }
+
+          delete_targets "$TARGET1" "$TARGET2"
+
+
