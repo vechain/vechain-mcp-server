@@ -1,24 +1,28 @@
 import { ABIEvent, Hex } from '@vechain/sdk-core'
 import type { z } from 'zod'
-import { getThorNetworkType } from '../../config/network'
-import { fetchAbiBySignature } from '../../services/b32'
-import { logger } from '../../utils/logger'
-import type { VeChainTool } from '../VeChainTool'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
-import { ThorDecodedEventSchema, ThorRawEventSchema } from './ThorSchemas'
-import { thorErrorResponse } from './utils'
+import { fetchAbiBySignature } from '@/services/b32'
+import {
+  createThorStructuredOutputSchema,
+  createThorToolResponseSchema,
+  getThorNetworkType,
+  ThorDecodedEventSchema,
+  ThorRawEventSchema,
+  thorErrorResponse,
+} from '@/services/thor'
+import type { MCPTool } from '@/types'
+import { logger } from '@/utils/logger'
 
 /**
  * Schemas for decode event tool outputs
  */
-const ThorDecodeEventOutputSchema = createThorStructuredOutputSchema(ThorDecodedEventSchema.nullable())
-const ThorDecodeEventResponseSchema = createThorToolResponseSchema(ThorDecodedEventSchema.nullable())
+const ThorDecodeEventOutputSchema = createThorStructuredOutputSchema(ThorDecodedEventSchema)
+const ThorDecodeEventResponseSchema = createThorToolResponseSchema(ThorDecodedEventSchema)
 type ThorDecodeEventResponse = z.infer<typeof ThorDecodeEventResponseSchema>
 
 /**
  * Tool for decoding an event emitted by a contract on Thor network
  */
-export const decodeEvent: VeChainTool = {
+export const decodeEvent: MCPTool = {
   name: 'thorDecodeEvent',
   title: 'Thor Decode Event',
   description: 'Decode an event emitted by a contract on Thor network',

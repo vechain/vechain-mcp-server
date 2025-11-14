@@ -1,11 +1,11 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <generic type> */
-import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types'
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 import type { z } from 'zod'
 
 /**
  * Interface for tools for auto discovery and registering
  */
-export interface VeChainTool {
+export interface MCPTool {
   name: string
   title: string
   description: string

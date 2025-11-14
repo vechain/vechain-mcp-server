@@ -1,12 +1,17 @@
 import { Address } from '@vechain/sdk-core'
 import { formatUnits, hexToBigInt } from 'viem'
 import { z } from 'zod'
-import { getThorClient, getThorNetworkType } from '../../config/network'
-import { logger } from '../../utils/logger'
-import type { VeChainTool } from '../VeChainTool'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
-import { HexStringSchema, ThorAddressSchema } from './ThorSchemas'
-import { thorErrorResponse } from './utils'
+import {
+  createThorStructuredOutputSchema,
+  createThorToolResponseSchema,
+  getThorClient,
+  getThorNetworkType,
+  HexStringSchema,
+  ThorAddressSchema,
+  thorErrorResponse,
+} from '@/services/thor'
+import type { MCPTool } from '@/types'
+import { logger } from '@/utils/logger'
 
 /**
  * Schema for Thor account return data
@@ -18,14 +23,14 @@ const ThorAccountDataSchema = z.object({
   type: z.enum(['wallet', 'contract']).describe('The type of the account'),
 })
 
-const ThorGetAccountOutputSchema = createThorStructuredOutputSchema(ThorAccountDataSchema.nullable())
-const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema.nullable())
+const ThorGetAccountOutputSchema = createThorStructuredOutputSchema(ThorAccountDataSchema)
+const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema)
 type ThorGetAccountResponse = z.infer<typeof ThorGetAccountResponseSchema>
 
 /**
  * Tool for getting account details from Thor network
  */
-export const getAccount: VeChainTool = {
+export const getAccount: MCPTool = {
   name: 'thorGetAccount',
   title: 'Thor Get Account',
   description: 'Get account details from Thor network',

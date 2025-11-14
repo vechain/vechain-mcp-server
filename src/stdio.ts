@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { cleanupServer, initServer, server } from './server.js'
 import { logger } from './utils/logger.js'

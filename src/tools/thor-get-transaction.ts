@@ -1,25 +1,28 @@
-import { z } from 'zod'
-import { getThorClient, getThorNetworkType } from '../../config/network'
-import { logger } from '../../utils/logger'
-import type { VeChainTool } from '../VeChainTool'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
-import { ThorTransactionIdSchema } from './ThorSchemas'
-import { thorErrorResponse } from './utils'
+import type { z } from 'zod'
+import {
+  createThorStructuredOutputSchema,
+  createThorToolResponseSchema,
+  getThorClient,
+  getThorNetworkType,
+  ThorTransactionIdSchema,
+  ThorTransactionSchema,
+  thorErrorResponse,
+} from '@/services/thor'
+import type { MCPTool } from '@/types'
+import { logger } from '@/utils/logger'
 
 /**
  * Schemas for get transaction tool outputs
  */
-// TODO: Define a schema for the transaction
-const ThorTransactionSchema = z.unknown()
 
-const ThorGetTransactionOutputSchema = createThorStructuredOutputSchema(ThorTransactionSchema.nullable())
-const ThorGetTransactionResponseSchema = createThorToolResponseSchema(ThorTransactionSchema.nullable())
+const ThorGetTransactionOutputSchema = createThorStructuredOutputSchema(ThorTransactionSchema)
+const ThorGetTransactionResponseSchema = createThorToolResponseSchema(ThorTransactionSchema)
 type ThorGetTransactionResponse = z.infer<typeof ThorGetTransactionResponseSchema>
 
 /**
  * Tool for getting transaction details from Thor network
  */
-export const getTransaction: VeChainTool = {
+export const getTransaction: MCPTool = {
   name: 'thorGetTransaction',
   title: 'Thor Get Transaction',
   description: 'Get transaction details from Thor network',

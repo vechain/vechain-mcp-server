@@ -1,26 +1,27 @@
-import { z } from 'zod'
-import { getThorClient, getThorNetworkType } from '../../config/network'
-import { logger } from '../../utils/logger'
-import type { VeChainTool } from '../VeChainTool'
-import { createThorStructuredOutputSchema, createThorToolResponseSchema } from './ThorResponse'
-import { ThorBlockRevisionSchema } from './ThorSchemas'
-import { thorErrorResponse } from './utils'
+import type { z } from 'zod'
+import {
+  createThorStructuredOutputSchema,
+  createThorToolResponseSchema,
+  getThorClient,
+  getThorNetworkType,
+  ThorBlockCompressedSchema,
+  ThorBlockRevisionSchema,
+  thorErrorResponse,
+} from '@/services/thor'
+import type { MCPTool } from '@/types'
+import { logger } from '@/utils/logger'
 
 /**
  * Schemas for get block tool outputs
  */
-
-// TODO: Define a schema for the compressed block
-const ThorBlockCompressedSchema = z.unknown()
-
-const ThorGetBlockOutputSchema = createThorStructuredOutputSchema(ThorBlockCompressedSchema.nullable())
-const ThorGetBlockResponseSchema = createThorToolResponseSchema(ThorBlockCompressedSchema.nullable())
+const ThorGetBlockOutputSchema = createThorStructuredOutputSchema(ThorBlockCompressedSchema)
+const ThorGetBlockResponseSchema = createThorToolResponseSchema(ThorBlockCompressedSchema)
 type ThorGetBlockResponse = z.infer<typeof ThorGetBlockResponseSchema>
 
 /**
  * Tool for getting block details from Thor network
  */
-export const getBlock: VeChainTool = {
+export const getBlock: MCPTool = {
   name: 'thorGetBlock',
   title: 'Thor Get Block',
   description: 'Get block details from Thor network',

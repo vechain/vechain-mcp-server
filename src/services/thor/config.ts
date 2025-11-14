@@ -1,5 +1,5 @@
 import { ThorClient } from '@vechain/sdk-network'
-import { logger } from '../utils/logger'
+import { logger } from '@/utils/logger'
 
 /**
  * Enum for Thor network
