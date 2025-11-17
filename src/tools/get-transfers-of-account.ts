@@ -1,8 +1,11 @@
 import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
-import { IndexerGetTransfersParamsSchema, IndexerTransferSchema } from '@/services/veworld-indexer/schemas'
-
+import {
+  IndexerGetTransfersParamsBaseSchema,
+  type IndexerGetTransfersParamsSchema,
+  IndexerTransferSchema,
+} from '@/services/veworld-indexer/schemas'
 import {
   createIndexerStructuredOutputSchema,
   createIndexerToolResponseSchema,
@@ -25,7 +28,7 @@ export const getTransfersOfAccount: MCPTool = {
   name: 'getTransfersOfAccount',
   title: 'Get Transfer events of account',
   description: 'Get the Transfer events of a given address or token address',
-  inputSchema: IndexerGetTransfersParamsSchema.shape,
+  inputSchema: IndexerGetTransfersParamsBaseSchema.shape,
   outputSchema: IndexerGetTransfersOfOutputSchema.shape,
   annotations: {
     idempotentHint: false,
@@ -35,9 +38,17 @@ export const getTransfersOfAccount: MCPTool = {
   },
   handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
     try {
+      const { address, tokenAddress, page, size, direction } = params
+      const safeParams: Partial<z.infer<typeof IndexerGetTransfersParamsSchema>> = {}
+      if (address) safeParams.address = address
+      if (tokenAddress) safeParams.tokenAddress = tokenAddress
+      if (typeof page === 'number') safeParams.page = page
+      if (typeof size === 'number') safeParams.size = size
+      if (direction === 'ASC' || direction === 'DESC') safeParams.direction = direction
+
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
-        params,
+        params: safeParams as z.infer<typeof IndexerGetTransfersParamsSchema>,
       })
 
       if (!response?.data) {
