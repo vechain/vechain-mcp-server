@@ -15,8 +15,10 @@ export const veworldIndexerGet = async <
   try {
     const url = new URL(endPoint, getIndexerUrl())
 
-    Object.entries(params ?? {}).forEach(([key, value]) => {
-      url.searchParams.set(key, value as string)
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && typeof value !== 'object') {
+        url.searchParams.set(key, value as string)
+      }
     })
 
     logger.debug(`GET ${url.toString()}`)

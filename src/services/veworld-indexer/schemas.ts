@@ -10,19 +10,22 @@ import {
 // ***************************** Indexer API params schemas *****************************/
 
 const paginationParamsSchema = z.object({
-  page: z.number().nullable().optional(),
-  size: z.number().nullable().optional(),
-  direction: z.enum(['ASC', 'DESC']).nullable().optional(),
+  page: z.number().optional(),
+  size: z.number().optional(),
+  direction: z.enum(['ASC', 'DESC']).optional(),
 })
 
 // ***************************** Transfer schemas *****************************/
 
 export const IndexerGetTransfersParamsSchema = z
   .object({
-    address: ThorAddressSchema,
-    tokenAddress: ThorAddressSchema.nullable().optional(),
+    address: ThorAddressSchema.optional(),
+    tokenAddress: ThorAddressSchema.optional(),
   })
   .extend(paginationParamsSchema.shape)
+  .refine(data => data.address || data.tokenAddress, {
+    message: "At least one of 'address' or 'tokenAddress' must be provided.",
+  })
 
 export const IndexerTransferSchema = z.object({
   id: z.string(),
