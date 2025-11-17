@@ -3,7 +3,7 @@ import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetTransfersParamsBaseSchema,
-  type IndexerGetTransfersParamsSchema,
+  IndexerGetTransfersParamsSchema,
   IndexerTransferSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -40,7 +40,7 @@ export const getTransfersOfAccount: MCPTool = {
     try {
       const response = await veworldIndexerGet<typeof IndexerTransferSchema>({
         endPoint: '/api/v1/transfers',
-        params,
+        params: IndexerGetTransfersParamsSchema.parse(params),
       })
 
       if (!response?.data) {
@@ -58,12 +58,19 @@ export const getTransfersOfAccount: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(
-        `Error getting Transfers of ${params.address ?? params.tokenAddress} from VeWorld Indexer: ${String(error)}`,
-      )
-      return indexerErrorResponse(
-        `Error getting transfers of ${params.address ?? params.tokenAddress} from VeWorld Indexer: ${String(error)}`,
-      )
+      if (error instanceof z.ZodError) {
+        const messages = error.issues?.map(issue => issue.message).filter(Boolean)
+        const validationMessage = messages?.length
+          ? messages.join('; ')
+          : 'Invalid parameters for getTransfersOfAccount.'
+
+        logger.warn(`Validation error in getTransfersOfAccount: ${validationMessage}`)
+        return indexerErrorResponse(validationMessage)
+      }
+
+      const identifier = params.address ?? params.tokenAddress ?? 'address or tokenAddress'
+      logger.warn(`Error getting Transfers of ${identifier} from VeWorld Indexer: ${String(error)}`)
+      return indexerErrorResponse(`Error getting transfers of ${identifier} from VeWorld Indexer.`)
     }
   },
 }

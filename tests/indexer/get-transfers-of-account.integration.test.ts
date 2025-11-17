@@ -58,7 +58,7 @@ describe('Indexer Get Transfers Of Account', () => {
     expect(response.structuredContent).toBeDefined()
     expect((response.structuredContent as { ok: boolean }).ok).toBe(false)
     expect((response.structuredContent as { error: string }).error).toContain(
-      'Failed to fetch transfers from VeWorld Indexer',
+      "At least one of 'address' or 'tokenAddress' must be provided.",
     )
   })
 })
