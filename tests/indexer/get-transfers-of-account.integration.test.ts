@@ -28,6 +28,8 @@ describe('Indexer Get Transfers Of Account', () => {
     expect(response.structuredContent).toBeDefined()
     expect((response.structuredContent as { network: string }).network).toBeDefined()
     expect((response.structuredContent as { ok: boolean }).ok).toBe(true)
+    expect((response.structuredContent as { data: any[] }).data).toBeDefined()
+    expect((response.structuredContent as { data: any[] }).data.length).toBeGreaterThan(10)
   })
 
   test('should fail when neither address nor tokenAddress is provided', async () => {
