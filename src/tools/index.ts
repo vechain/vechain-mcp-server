@@ -1,3 +1,4 @@
+export { getHistoryOfAccount } from './get-history-of-account'
 export { getTransfersOfAccount } from './get-transfers-of-account'
 export {
   searchDocsStargate,

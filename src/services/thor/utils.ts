@@ -7,7 +7,7 @@ import { getThorNetworkType, ThorNetworkType } from './config'
  * @param dataSchema - Zod schema for the data field
  * @returns Zod schema for Thor structured output
  */
-function createThorStructuredOutputSchema<T extends z.ZodType>(dataSchema: T) {
+function createThorStructuredOutputSchema<T extends z.ZodTypeAny>(dataSchema: T) {
   return z.object({
     ok: z.boolean(),
     network: z.nativeEnum(ThorNetworkType),
