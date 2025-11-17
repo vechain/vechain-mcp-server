@@ -1,5 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import {
+  type IndexerGetTransfersOfResponse,
+  IndexerGetTransfersOfResponseSchema,
+} from '../../src/tools/get-transfers-of-account'
 
 describe('Indexer Get Transfers Of Account', () => {
   let client: Client
@@ -26,10 +30,12 @@ describe('Indexer Get Transfers Of Account', () => {
     })
     expect(response.content).toBeDefined()
     expect(response.structuredContent).toBeDefined()
-    expect((response.structuredContent as { network: string }).network).toBeDefined()
-    expect((response.structuredContent as { ok: boolean }).ok).toBe(true)
-    expect((response.structuredContent as { data: any[] }).data).toBeDefined()
-    expect((response.structuredContent as { data: any[] }).data.length).toBeGreaterThan(10)
+    const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
+    const structuredData = structured.structuredContent
+    expect(structuredData.network).toBeDefined()
+    expect(structuredData.ok).toBe(true)
+    expect(structuredData.data).toBeDefined()
+    expect(structuredData.data?.length).toBeGreaterThan(10)
   })
 
   test('should get transfers for a valid tokenAddress (B3TR)', async () => {
@@ -42,10 +48,12 @@ describe('Indexer Get Transfers Of Account', () => {
     })
     expect(response.content).toBeDefined()
     expect(response.structuredContent).toBeDefined()
-    expect((response.structuredContent as { network: string }).network).toBeDefined()
-    expect((response.structuredContent as { ok: boolean }).ok).toBe(true)
-    expect((response.structuredContent as { data: any[] }).data).toBeDefined()
-    expect((response.structuredContent as { data: any[] }).data.length).toBeGreaterThan(0)
+    const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
+    const structuredData = structured.structuredContent
+    expect(structuredData.network).toBeDefined()
+    expect(structuredData.ok).toBe(true)
+    expect(structuredData.data).toBeDefined()
+    expect(structuredData.data?.length).toBeGreaterThan(10)
   })
 
   test('should fail when neither address nor tokenAddress is provided', async () => {
@@ -56,9 +64,9 @@ describe('Indexer Get Transfers Of Account', () => {
 
     expect(response.content).toBeDefined()
     expect(response.structuredContent).toBeDefined()
-    expect((response.structuredContent as { ok: boolean }).ok).toBe(false)
-    expect((response.structuredContent as { error: string }).error).toContain(
-      "At least one of 'address' or 'tokenAddress' must be provided.",
-    )
+    const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
+    const structuredData = structured.structuredContent
+    expect(structuredData.ok).toBe(false)
+    expect(structuredData.error).toContain("At least one of 'address' or 'tokenAddress' must be provided.")
   })
 })
