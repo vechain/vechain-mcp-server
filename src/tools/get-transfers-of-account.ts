@@ -38,17 +38,9 @@ export const getTransfersOfAccount: MCPTool = {
   },
   handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
     try {
-      const { address, tokenAddress, page, size, direction } = params
-      const safeParams: Partial<z.infer<typeof IndexerGetTransfersParamsSchema>> = {}
-      if (address) safeParams.address = address
-      if (tokenAddress) safeParams.tokenAddress = tokenAddress
-      if (typeof page === 'number') safeParams.page = page
-      if (typeof size === 'number') safeParams.size = size
-      if (direction === 'ASC' || direction === 'DESC') safeParams.direction = direction
-
-      const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
+      const response = await veworldIndexerGet<typeof IndexerTransferSchema>({
         endPoint: '/api/v1/transfers',
-        params: safeParams as z.infer<typeof IndexerGetTransfersParamsSchema>,
+        params,
       })
 
       if (!response?.data) {
