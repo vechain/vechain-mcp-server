@@ -38,7 +38,7 @@ export const getTransfersOfAccount: MCPTool = {
   },
   handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
     try {
-      const response = await veworldIndexerGet<typeof IndexerTransferSchema>({
+      const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
         params: IndexerGetTransfersParamsSchema.parse(params),
       })
