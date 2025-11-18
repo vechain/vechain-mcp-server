@@ -1,5 +1,6 @@
 import type { AbiParameter } from 'viem'
 import { z } from 'zod'
+import { bigint } from 'zod/v4'
 
 /**
  * Schema for Thor block revision
@@ -68,3 +69,62 @@ export const ThorDecodedEventSchema = z.object({
   name: z.string(),
   inputs: z.array(AbiParameterSchema),
 })
+
+/**
+ * Schema for Thor transfer
+ */
+export const ThorTransferSchema = z.object({
+  sender: ThorAddressSchema.describe('The sender addressof the transfer'),
+  recipient: ThorAddressSchema.describe('The recipient address of the transfer'),
+  amount: z.string().describe('The amount of the transfer'),
+})
+
+/**
+ * Schema for Thor transaction output
+ */
+export const ThorTransactionOutputSchema = z.object({
+  contractAddress: z.string().nullable().describe('The contract address of the output'),
+  events: z.array(ThorRawEventSchema),
+  transfers: z.array(ThorTransferSchema),
+})
+
+/**
+ * Schema for Thor transaction clause
+ */
+export const ThorTransactionClauseSchema = z.object({
+  to: z.string().nullable().describe('The to address of the clause'),
+  value: z.union([z.string(), z.number()]).describe('The value of the clause'),
+  data: z.string(),
+  comments: z.string().optional(),
+  abi: z.string().optional(),
+})
+
+/** 
+ * Schema for Thor expanded block transaction details
+ */
+export const ThorTransactionsExpandedBlockDetailSchema = z.object({
+  id: HexStringSchema.describe('The id of the transaction'),
+  type: z.number().optional(),
+  chainTag: z.string().describe('The chain tag of the transaction'),
+  blockRef: HexStringSchema.describe('The block reference of the transaction'),
+  expiration: z.number(),
+  clauses: ThorTransactionClauseSchema.array(),
+  maxFeePerGas: z.string().optional().describe('The max fee per gas of the transaction'),
+  maxPriorityFeePerGas: z.string().optional().describe('The max priority fee per gas of the transaction'),
+  gasPriceCoef: z.number().optional(),
+  gas: z.number().describe('The gas of the transaction'),
+  origin: ThorAddressSchema,
+  delegator: ThorAddressSchema.nullable().describe('The delegator of the transaction'),
+  nonce: HexStringSchema,
+  dependsOn: HexStringSchema.nullable(),
+  size: z.number(),
+  gasUsed: z.number(),
+  gasPayer: ThorAddressSchema,
+  paid: z.bigint().describe('The paid amount of the transaction'),
+  reward: z.bigint().describe('The reward amount of the transaction'),
+  reverted: z.boolean(),
+  outputs: ThorTransactionOutputSchema.array(),
+})
+
+export const ThorBlockTransactionListSchema = z.array(ThorTransactionsExpandedBlockDetailSchema)
+
