@@ -19,8 +19,8 @@ export const getTokenFiatPrice: MCPTool = {
   title: 'Get token price in fiat (VET/VTHO)',
   description: 'Get the current price of VET or VTHO in a given fiat currency using CoinGecko.',
   inputSchema: {
-    token: TokenSchema.describe('Token symbol to query (vet or vtho)'),
-    fiat: FiatSchema.describe('Fiat currency to return the price in (usd, eur, jpy, chf)'),
+    token: z.string().describe('Token symbol to query (VET or VTHO, case-insensitive)'),
+    fiat: z.string().describe('Fiat currency to return the price in (USD, EUR, JPY, CHF), case-insensitive'),
   },
   outputSchema: TokenFiatPriceDataSchema.shape,
   annotations: {
@@ -33,18 +33,31 @@ export const getTokenFiatPrice: MCPTool = {
     token,
     fiat,
   }: {
-    token: SupportedToken
-    fiat: SupportedFiat
+    token: string
+    fiat: string
   }): Promise<{
     content: { type: 'text'; text: string }[]
     structuredContent: z.infer<typeof TokenFiatPriceDataSchema>
   }> => {
     try {
-      const price = await getTokenFiatPriceFromCoinGecko({ token, fiat })
+      const parsed = z
+        .object({
+          token: TokenSchema,
+          fiat: FiatSchema,
+        })
+        .parse({
+          token: token.toLowerCase(),
+          fiat: fiat.toLowerCase(),
+        })
+
+      const price = await getTokenFiatPriceFromCoinGecko({
+        token: parsed.token as SupportedToken,
+        fiat: parsed.fiat as SupportedFiat,
+      })
 
       const data: z.infer<typeof TokenFiatPriceDataSchema> = {
-        token,
-        fiat,
+        token: parsed.token,
+        fiat: parsed.fiat,
         price,
         source: 'coingecko',
       }
@@ -60,8 +73,8 @@ export const getTokenFiatPrice: MCPTool = {
       logger.warn(message)
 
       const data: z.infer<typeof TokenFiatPriceDataSchema> = {
-        token,
-        fiat,
+        token: token.toLowerCase() as z.infer<typeof TokenSchema>,
+        fiat: fiat.toLowerCase() as z.infer<typeof FiatSchema>,
         price: NaN,
         source: 'coingecko',
         error: message,

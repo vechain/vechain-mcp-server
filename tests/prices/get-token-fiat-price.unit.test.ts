@@ -32,7 +32,7 @@ describe('getTokenFiatPrice tool (unit)', () => {
       }),
     })
 
-    const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'usd' })
+    const result = await getTokenFiatPrice.handler({ token: 'VET', fiat: 'USD' })
     const data = result.structuredContent as {
       token: string
       fiat: string
