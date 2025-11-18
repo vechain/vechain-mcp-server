@@ -84,8 +84,8 @@ export const ThorTransferSchema = z.object({
  */
 export const ThorTransactionOutputSchema = z.object({
   contractAddress: z.string().nullable().describe('The contract address of the output'),
-  events: z.array(ThorRawEventSchema),
-  transfers: z.array(ThorTransferSchema),
+  events: z.array(ThorRawEventSchema).describe('A list of events emitted by the contract'),
+  transfers: z.array(ThorTransferSchema).describe('A list of transfers made by the transaction'),
 })
 
 /**

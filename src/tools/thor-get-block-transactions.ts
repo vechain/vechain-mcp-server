@@ -4,14 +4,12 @@ import {
   createThorToolResponseSchema,
   getThorClient,
   getThorNetworkType,
-  ThorBlockCompressedSchema,
   ThorBlockRevisionSchema,
   ThorBlockTransactionListSchema,
   thorErrorResponse,
 } from '@/services/thor'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
-import { Hex } from '@vechain/sdk-core'
 
 /**
  * Schemas for get block tool outputs
@@ -23,7 +21,7 @@ type ThorGetBlockTransactionsResponse = z.infer<typeof ThorGetBlockTransactionsR
 /**
  * Tool for getting block details from Thor network
  */
-export const getBlock: MCPTool = {
+export const getBlockTransactions: MCPTool = {
   name: 'thorGetBlockTransactions',
   title: 'Thor Get Block Transactions',
   description: 'Get the transactions details from a block on Thor network',
