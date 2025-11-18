@@ -1,4 +1,8 @@
 export { getTransfersOfAccount } from './get-transfers-of-account'
+export { getTransfersTo } from './get-transfers-to'
+export { getTransfersFrom } from './get-transfers-from'
+export { getTransfersForBlock } from './get-transfers-for-block'
+export { getFungibleTokenContracts } from './get-fungible-token-contracts'
 export {
   searchDocsStargate,
   searchDocsVebetterDao,
