@@ -1,4 +1,4 @@
-import { getTokenFiatPrice } from '@/tools/get-token-fiat-price'
+import { getTokenFiatPrice, TokenFiatPriceDataSchema } from '@/tools/get-token-fiat-price'
 
 describe('getTokenFiatPrice tool (unit)', () => {
   const originalFetch = global.fetch
@@ -33,13 +33,7 @@ describe('getTokenFiatPrice tool (unit)', () => {
     })
 
     const result = await getTokenFiatPrice.handler({ token: 'VET', fiat: 'USD' })
-    const data = result.structuredContent as {
-      token: string
-      fiat: string
-      price: number
-      source: string
-      error?: string
-    }
+    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
 
     expect(data.token).toBe('vet')
     expect(data.fiat).toBe('usd')
@@ -67,13 +61,7 @@ describe('getTokenFiatPrice tool (unit)', () => {
     })
 
     const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'eur' })
-    const data = result.structuredContent as {
-      token: string
-      fiat: string
-      price: number
-      source: string
-      error?: string
-    }
+    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
 
     expect(data.token).toBe('vet')
     expect(data.fiat).toBe('eur')
@@ -92,13 +80,7 @@ describe('getTokenFiatPrice tool (unit)', () => {
     })
 
     const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'usd' })
-    const data = result.structuredContent as {
-      token: string
-      fiat: string
-      price: number
-      source: string
-      error?: string
-    }
+    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
 
     expect(data.token).toBe('vet')
     expect(data.fiat).toBe('usd')
@@ -107,5 +89,3 @@ describe('getTokenFiatPrice tool (unit)', () => {
     expect(typeof data.error).toBe('string')
   })
 })
-
-

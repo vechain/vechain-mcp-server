@@ -6,10 +6,12 @@ import { logger } from '@/utils/logger'
 const TokenSchema = z.enum(['vet', 'vtho'])
 const FiatSchema = z.enum(['usd', 'eur', 'jpy', 'chf'])
 
-const TokenFiatPriceDataSchema = z.object({
+export const TokenFiatPriceDataSchema = z.object({
   token: TokenSchema,
   fiat: FiatSchema,
-  price: z.number().describe('Current price of the token in the selected fiat currency'),
+  price: z
+    .union([z.number(), z.nan()])
+    .describe('Current price of the token in the selected fiat currency; NaN when unavailable'),
   source: z.literal('coingecko'),
   error: z.string().optional().describe('Optional error message if the price could not be fetched'),
 })

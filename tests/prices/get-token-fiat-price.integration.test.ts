@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { TokenFiatPriceDataSchema } from '@/tools/get-token-fiat-price'
 
 describe('getTokenFiatPrice (integration)', () => {
   let client: Client
@@ -29,13 +30,7 @@ describe('getTokenFiatPrice (integration)', () => {
 
     expect(response.content).toBeDefined()
 
-    const data = response.structuredContent as {
-      token: string
-      fiat: string
-      price: number
-      source: string
-      error?: string
-    }
+    const data = TokenFiatPriceDataSchema.parse(response.structuredContent)
 
     expect(data.token).toBe('vet')
     expect(data.fiat).toBe('usd')
@@ -55,13 +50,7 @@ describe('getTokenFiatPrice (integration)', () => {
 
     expect(response.content).toBeDefined()
 
-    const data = response.structuredContent as {
-      token: string
-      fiat: string
-      price: number
-      source: string
-      error?: string
-    }
+    const data = TokenFiatPriceDataSchema.parse(response.structuredContent)
 
     expect(data.token).toBe('vet')
     expect(data.fiat).toBe('eur')
@@ -70,5 +59,3 @@ describe('getTokenFiatPrice (integration)', () => {
     expect(typeof data.error === 'string' || data.error === undefined).toBe(true)
   })
 })
-
-
