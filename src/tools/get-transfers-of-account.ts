@@ -18,9 +18,9 @@ import { logger } from '@/utils/logger'
 /**
  * Schemas for get transfers of account tool outputs
  */
-const IndexerGetTransfersOfOutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerTransferSchema))
-const IndexerGetTransfersOfResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
-type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOfResponseSchema>
+export const IndexerGetTransfersOfOutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerTransferSchema))
+export const IndexerGetTransfersOfResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
+export type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOfResponseSchema>
 
 /**
  * Tool for getting transfer events of a given account

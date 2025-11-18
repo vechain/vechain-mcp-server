@@ -13,9 +13,15 @@ import {
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
-const OutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerFungibleTokenContractSchema))
-const ResponseSchema = createIndexerToolResponseSchema(z.array(IndexerFungibleTokenContractSchema))
-type Response = z.infer<typeof ResponseSchema>
+export const IndexerGetFungibleTokenContractsOutputSchema = createIndexerStructuredOutputSchema(
+  z.array(IndexerFungibleTokenContractSchema),
+)
+export const IndexerGetFungibleTokenContractsResponseSchema = createIndexerToolResponseSchema(
+  z.array(IndexerFungibleTokenContractSchema),
+)
+export type IndexerGetFungibleTokenContractsResponse = z.infer<
+  typeof IndexerGetFungibleTokenContractsResponseSchema
+>
 
 export const getFungibleTokenContracts: MCPTool = {
   name: 'getFungibleTokenContracts',
@@ -23,14 +29,16 @@ export const getFungibleTokenContracts: MCPTool = {
   description:
     'List fungible token contract addresses for a wallet via Indexer. Use with getTokenRegistry for metadata. Endpoint: /api/v1/transfers/fungible-tokens-contracts.',
   inputSchema: IndexerGetFungibleTokenContractsParamsSchema.shape,
-  outputSchema: OutputSchema.shape,
+  outputSchema: IndexerGetFungibleTokenContractsOutputSchema.shape,
   annotations: {
     idempotentHint: false,
     openWorldHint: true,
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async (params: z.infer<typeof IndexerGetFungibleTokenContractsParamsSchema>): Promise<Response> => {
+  handler: async (
+    params: z.infer<typeof IndexerGetFungibleTokenContractsParamsSchema>,
+  ): Promise<IndexerGetFungibleTokenContractsResponse> => {
     try {
       const parsed = IndexerGetFungibleTokenContractsParamsSchema.parse(params)
       const response = await veworldIndexerGet<

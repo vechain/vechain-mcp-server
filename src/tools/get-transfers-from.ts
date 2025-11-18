@@ -10,9 +10,9 @@ import {
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
-const OutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerTransferSchema))
-const ResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
-type Response = z.infer<typeof ResponseSchema>
+export const IndexerGetTransfersFromOutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerTransferSchema))
+export const IndexerGetTransfersFromResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
+export type IndexerGetTransfersFromResponse = z.infer<typeof IndexerGetTransfersFromResponseSchema>
 
 export const getTransfersFrom: MCPTool = {
   name: 'getTransfersFrom',
@@ -20,14 +20,16 @@ export const getTransfersFrom: MCPTool = {
   description:
     "Query VeWorld Indexer /api/v1/transfers/from for outgoing transfers. Required 'address' (sender). Optional 'tokenAddress' to scope to a specific VIP‑180/721 contract and pagination. Use for 'outgoing transfers' or 'payments from wallet'.",
   inputSchema: IndexerGetTransfersFromParamsSchema.shape,
-  outputSchema: OutputSchema.shape,
+  outputSchema: IndexerGetTransfersFromOutputSchema.shape,
   annotations: {
     idempotentHint: false,
     openWorldHint: true,
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async (params: z.infer<typeof IndexerGetTransfersFromParamsSchema>): Promise<Response> => {
+  handler: async (
+    params: z.infer<typeof IndexerGetTransfersFromParamsSchema>,
+  ): Promise<IndexerGetTransfersFromResponse> => {
     try {
       IndexerGetTransfersFromParamsSchema.parse(params)
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersFromParamsSchema>({
