@@ -21,8 +21,7 @@ export const getFungibleTokenContracts: MCPTool = {
   name: 'getFungibleTokenContracts',
   title: 'Indexer: List wallet fungible tokens (VIP-180/ERC‑20‑like)',
   description:
-    "Return fungible token contract addresses for a wallet using VeWorld Indexer. Use this when asked to list 'official tokens I own', 'wallet tokens', 'token holdings', 'portfolio', or 'token list' for an address. Source: TransferEvent → /api/v1/transfers/fungible-tokens-contracts.",
-  // Reuse the same input (single address + pagination)
+    'List fungible token contract addresses for a wallet via Indexer. Use with getTokenRegistry for metadata. Endpoint: /api/v1/transfers/fungible-tokens-contracts.',
   inputSchema: IndexerGetFungibleTokenContractsParamsSchema.shape,
   outputSchema: OutputSchema.shape,
   annotations: {
