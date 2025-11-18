@@ -67,13 +67,18 @@ const getIndexerUrl = () => {
 /**
  * RESPONSE
  */
-const paginationSchema = z.object({
-  hasCount: z.boolean(),
-  countLimit: z.number(),
-  totalPages: z.number().nullable().optional(),
-  totalElements: z.number().nullable().optional(),
-  hasNext: z.boolean(),
-}).describe('Pagination metadata returned by the Indexer')
+const paginationSchema = z
+  .object({
+    // Cursor-based fields (used by some endpoints like /api/v1/nfts)
+    hasNext: z.boolean().describe('Whether there is another page of results'),
+    cursor: z.string().optional().describe('Opaque cursor token for fetching the next page'),
+    // Count-based fields (used by other list endpoints)
+    hasCount: z.boolean().optional().describe('Whether the response includes total count metadata'),
+    countLimit: z.number().optional().describe('The maximum number of items counted if counting is limited'),
+    totalPages: z.number().nullable().optional().describe('Total number of pages when counting is enabled'),
+    totalElements: z.number().nullable().optional().describe('Total number of elements when counting is enabled'),
+  })
+  .describe('Pagination metadata returned by the Indexer (supports cursor- and count-based styles)')
 
 const indexerResponseSchema = <T extends z.ZodSchema>(schema: T) =>
   z

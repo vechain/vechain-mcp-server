@@ -9,11 +9,17 @@ import {
 
 // ***************************** Indexer API params schemas *****************************/
 
-const paginationParamsSchema = z.object({
-  page: z.number().optional(),
-  size: z.number().optional(),
-  direction: z.enum(['ASC', 'DESC']).optional(),
-}).describe('Pagination parameters for Indexer endpoints')
+const paginationParamsSchema = z
+  .object({
+    page: z.number().optional().describe('Zero-based results page number (0 is the first page)'),
+    size: z.number().optional().describe('Results per page (1..150); API default is typically 20'),
+    direction: z
+      .enum(['ASC', 'DESC'])
+      .optional()
+      .describe("Sort direction for time-based queries; defaults to 'DESC' (newest first)"),
+    cursor: z.string().optional().describe('Opaque cursor for fetching the next page when provided by the API'),
+  })
+  .describe('Pagination parameters for Indexer endpoints')
 
 // ***************************** Transfer schemas *****************************/
 
@@ -70,7 +76,7 @@ export const IndexerFungibleTokenContractSchema = ThorAddressSchema.describe(
 
 export const IndexerGetFungibleTokenContractsParamsSchema = z
     .object({
-      address: ThorAddressSchema.describe('Wallet address'),
+      address: ThorAddressSchema.describe('Owner wallet address whose fungible token contracts should be listed'),
       officialTokens: z.boolean().default(true).describe('Return only official tokens when true'),
     })
     .extend(paginationParamsSchema.shape)
@@ -86,11 +92,50 @@ export const IndexerTransferSchema = z.object({
   txId: ThorTransactionIdSchema.optional(),
   from: ThorAddressSchema,
   to: ThorAddressSchema,
-  value: z.coerce.bigint(),
+  value: z.string().describe('Transfer amount as a string (may be large)'),
   tokenAddress: ThorAddressSchema.nullable().optional(),
   topics: z.array(HexStringSchema),
   tokenId: z.string().nullable().optional(),
   eventType: z.enum(['FUNGIBLE_TOKEN', 'NFT', 'VET']),
 }).describe('A normalized transfer event (VET, fungible token, or NFT) returned by the Indexer')
 
+// ***************************** NFT schemas *****************************/
+export const IndexerNFTAssetSchema = z
+  .object({
+    id: z.string().describe('Unique identifier for this NFT index record'),
+    tokenId: z.string().describe('NFT token identifier as a string'),
+    contractAddress: ThorAddressSchema.describe('NFT contract address (VIP‑721/VIP‑181)'),
+    owner: ThorAddressSchema.describe('Current owner wallet address'),
+    txId: ThorTransactionIdSchema.describe('Transaction id that produced/last moved the NFT'),
+    blockNumber: ThorBlockNumberSchema.describe('Block number associated with txId'),
+    blockId: ThorBlockIdSchema.describe('Block id (hash) associated with txId'),
+    blockTimestamp: z.number().describe('Block timestamp (Unix seconds)'),
+  })
+  .passthrough()
+  .describe(
+    'An NFT asset as returned by the VeWorld Indexer. Additional fields may be present and are preserved via passthrough.',
+  )
+
+export const IndexerGetNFTsParamsSchema = z
+  .object({
+    address: ThorAddressSchema.describe(
+      'Wallet address that owns NFTs to query (0x-prefixed, 40 hex chars)',
+    ),
+    contractAddress: ThorAddressSchema.optional().describe(
+      'Optional NFT contract address to filter results (VIP‑721/VIP‑181)',
+    ),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe(
+    "Parameters for GET /api/v1/nfts. Provide 'address' (owner), optional 'contractAddress', and pagination.",
+  )
+
+export const IndexerGetNFTContractsParamsSchema = z
+  .object({
+    address: ThorAddressSchema.describe(
+      'Wallet address whose NFT contract addresses should be listed (0x-prefixed, 40 hex chars)',
+    ),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe("Parameters for GET /api/v1/nfts/contracts. Provide 'address' (owner) and pagination.")
 
