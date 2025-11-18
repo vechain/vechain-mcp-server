@@ -24,7 +24,7 @@ export const TokenRegistryItemSchema = z
     name: z.string().describe('Human‑readable token name'),
     symbol: z.string().describe('Ticker symbol (case‑sensitive as registered)'),
     decimals: z.number().describe('Number of decimal places for on‑chain amounts'),
-    address: ThorAddressSchema.describe('VIP‑180 contract address (0x…)'),
+    address: ThorAddressSchema.describe('VIP‑180/ERC-20 contract address (0x…)'),
     desc: z.string().optional().describe('Short description or purpose of the token'),
     icon: z.string().optional().describe('Filename or path to token icon within the registry repo'),
     totalSupply: z.string().optional().describe('Total supply as a string (may be very large or “Infinite”)'),
