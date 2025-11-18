@@ -44,6 +44,41 @@ export const veworldIndexerGet = async <
   }
 }
 
+/**
+ * Convenience helper for endpoints that return a single object (not wrapped in { data, pagination }).
+ */
+export const veworldIndexerGetSingle = async <T>({
+  endPoint,
+  params = {},
+}: {
+  endPoint: string
+  params?: Record<string, string | number | boolean | null | undefined>
+}): Promise<T | null> => {
+  try {
+    const url = new URL(endPoint, getIndexerUrl())
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && typeof value !== 'object') {
+        url.searchParams.set(key, String(value))
+      }
+    })
+    logger.debug(`GET ${url.toString()}`)
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    if (!response.ok) {
+      logger.warn(`Failed to fetch VeWorld Indexer data: ${response.status} ${response.statusText}`)
+      return null
+    }
+    const data = (await response.json()) as T
+    logger.debug(`Fetch success: ${JSON.stringify(data, null, 2)}`)
+    return data
+  } catch (error) {
+    logger.warn(`Error fetching VeWorld Indexer data:`, String(error))
+    return null
+  }
+}
+
 const veworldIndexerUrl = {
   [ThorNetworkType.MAINNET]: 'https://indexer.mainnet.vechain.org',
   [ThorNetworkType.TESTNET]: 'https://indexer.testnet.vechain.org',
@@ -67,7 +102,7 @@ const getIndexerUrl = () => {
 /**
  * RESPONSE
  */
-const paginationSchema = z
+export const paginationSchema = z
   .object({
     // Cursor-based fields (used by some endpoints like /api/v1/nfts)
     hasNext: z.boolean().describe('Whether there is another page of results'),
@@ -80,7 +115,7 @@ const paginationSchema = z
   })
   .describe('Pagination metadata returned by the Indexer (supports cursor- and count-based styles)')
 
-const indexerResponseSchema = <T extends z.ZodSchema>(schema: T) =>
+export const indexerResponseSchema = <T extends z.ZodSchema>(schema: T) =>
   z
     .object({
       data: z.array(schema),

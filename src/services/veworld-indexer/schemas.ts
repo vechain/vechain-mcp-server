@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { indexerResponseSchema } from '@/services/veworld-indexer'
 import {
   HexStringSchema,
   ThorAddressSchema,
@@ -147,4 +148,122 @@ export const IndexerGetNFTContractsParamsBaseSchema = z
 export const IndexerGetNFTContractsParamsSchema = IndexerGetNFTContractsParamsBaseSchema.required({
   owner: true,
 }).describe("Parameters for GET /api/v1/nfts/contracts. Requires 'owner'.")
+
+// ***************************** Transactions schemas *****************************/
+
+export const IndexerTransactionClauseSchema = z
+  .object({
+    to: ThorAddressSchema.nullable().optional(),
+    value: z.coerce.string(),
+    data: z.coerce.string(),
+  })
+  .describe(
+    'A single VeChain transaction clause: target address (nullable for contract creation), value (hex wei), and call data.',
+  )
+
+export const IndexerTransactionEventSchema = z
+  .object({
+    address: ThorAddressSchema,
+    topics: z.array(HexStringSchema).describe('Topics array for the log/event'),
+    data: z.coerce.string(),
+    name: z.string().optional().describe('Decoded event name (when ABI is known)'),
+    params: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe('Decoded event arguments as a key/value map (when ABI is known)'),
+  })
+  .describe('A decoded log event emitted by a transaction')
+
+export const IndexerTransactionTransferSchema = z
+  .object({
+    sender: ThorAddressSchema,
+    recipient: ThorAddressSchema,
+    amount: z.coerce.string(),
+  })
+  .describe('A normalized transfer extracted by the Indexer')
+
+export const IndexerTransactionOutputSchema = z
+  .object({
+    contractAddress: ThorAddressSchema,
+    events: z.array(IndexerTransactionEventSchema),
+    transfers: z.array(IndexerTransactionTransferSchema),
+  })
+  .describe('Per-clause outputs including decoded events and detected transfers')
+
+export const IndexerTransactionSchema = z
+  .object({
+    id: z.string().describe('Transaction hash (id)'),
+    blockId: ThorBlockIdSchema.describe('Block hash containing this transaction'),
+    blockNumber: ThorBlockNumberSchema,
+    blockTimestamp: z.number().describe('Block timestamp (Unix seconds)'),
+    type: z.number(),
+    size: z.number().describe('Raw transaction size in bytes'),
+    chainTag: z.number().optional().describe('Thor chain tag (network identifier)'),
+    blockRef: z.coerce.string().describe('Block reference used to compute expiration'),
+    expiration: z
+      .number()
+      .describe('Number of blocks after blockRef before the transaction expires'),
+    clauses: z.array(IndexerTransactionClauseSchema).describe('Clauses executed by this transaction'),
+    gasPriceCoef: z
+      .number()
+      .optional()
+      .describe('Gas price coefficient used in effective gas price calculation'),
+    gas: z.number().describe('Gas limit for the transaction'),
+    maxFeePerGas: z.coerce.string().optional().describe('Max fee per gas (hex wei)'),
+    maxPriorityFeePerGas: z.coerce.string().optional().describe('Max priority fee per gas (hex wei)'),
+    dependsOn: z.coerce.string().nullable().optional().describe('Optional dependency transaction id'),
+    nonce: z.coerce.string().describe('Arbitrary nonce'),
+    gasUsed: z.number().describe('Actual gas used by the transaction'),
+    gasPayer: ThorAddressSchema.describe('Address that paid for gas (delegator)'),
+    paid: z.coerce.string().describe('Total fee paid (hex wei)'),
+    reward: z.coerce.string().describe('Authority reward attributed to this transaction (hex wei)'),
+    reverted: z.boolean().describe('Whether the transaction was reverted'),
+    origin: ThorAddressSchema.describe('Origin address that initiated the transaction'),
+    outputs: z.array(IndexerTransactionOutputSchema),
+  })
+  .describe('A decoded VeChain transaction as returned by the VeWorld Indexer')
+
+// List response for transactions endpoints (reuse generic Indexer wrapper)
+export const IndexerTransactionListResponseSchema = indexerResponseSchema(IndexerTransactionSchema).describe(
+  'List response for transactions endpoints',
+)
+
+// Params: GET /api/v1/transactions (by origin or delegator)
+export const IndexerGetTransactionsParamsBaseSchema = z
+  .object({
+    origin: ThorAddressSchema.optional().describe('Origin address, the address that initiated the transaction'),
+    delegator: ThorAddressSchema.optional().describe('Delegator address, the address that paid for the transaction'),
+    after: z.number().optional().describe('Return txs at or after this Unix timestamp (seconds)'),
+    before: z.number().optional().describe('Return txs at or before this Unix timestamp (seconds)'),
+    expanded: z.boolean().optional().describe('Include decoded clause outputs/logs for richer results'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Base params for GET /api/v1/transactions (one of origin or delegator)')
+
+export const IndexerGetTransactionsParamsSchema = IndexerGetTransactionsParamsBaseSchema.refine(
+  data => !!data.origin || !!data.delegator,
+  { message: "At least one of 'origin' or 'delegator' must be provided." },
+).describe("Validated params for GET /api/v1/transactions requiring 'origin' or 'delegator'")
+
+// Params: GET /api/v1/transactions/delegated (by delegator)
+export const IndexerGetDelegatedTransactionsParamsSchema = z
+  .object({
+    delegator: ThorAddressSchema.describe('Delegator (gas payer) address'),
+    after: z.number().optional().describe('Return txs at or after this Unix timestamp (seconds)'),
+    before: z.number().optional().describe('Return txs at or before this Unix timestamp (seconds)'),
+    expanded: z.boolean().optional().describe('Include decoded clause outputs/logs for richer results'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/transactions/delegated')
+
+// Params: GET /api/v1/transactions/contract (by contract address)
+export const IndexerGetContractTransactionsParamsSchema = z
+  .object({
+    contractAddress: ThorAddressSchema.describe('Contract address that the transaction interacted with'),
+    after: z.number().optional().describe('Return txs at or after this Unix timestamp (seconds)'),
+    before: z.number().optional().describe('Return txs at or before this Unix timestamp (seconds)'),
+    expanded: z.boolean().optional().describe('Include decoded clause outputs/logs for richer results, would recommend to set to true to get the full transaction details'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/transactions/contract')
 
