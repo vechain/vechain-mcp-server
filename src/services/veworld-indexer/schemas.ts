@@ -116,9 +116,9 @@ export const IndexerNFTAssetSchema = z
     'An NFT asset as returned by the VeWorld Indexer. Additional fields may be present and are preserved via passthrough.',
   )
 
-export const IndexerGetNFTsParamsSchema = z
+export const IndexerGetNFTsParamsBaseSchema = z
   .object({
-    address: ThorAddressSchema.describe(
+    address: ThorAddressSchema.optional().describe(
       'Wallet address that owns NFTs to query (0x-prefixed, 40 hex chars)',
     ),
     contractAddress: ThorAddressSchema.optional().describe(
@@ -126,16 +126,25 @@ export const IndexerGetNFTsParamsSchema = z
     ),
   })
   .extend(paginationParamsSchema.shape)
-  .describe(
-    "Parameters for GET /api/v1/nfts. Provide 'address' (owner), optional 'contractAddress', and pagination.",
-  )
+  .describe('Base parameters for GET /api/v1/nfts (address optional for handler validation)')
 
-export const IndexerGetNFTContractsParamsSchema = z
+export const IndexerGetNFTsParamsSchema = IndexerGetNFTsParamsBaseSchema.required({
+  address: true,
+}).describe("Parameters for GET /api/v1/nfts. Requires 'address'.")
+
+export const IndexerGetNFTContractsParamsBaseSchema = z
   .object({
-    address: ThorAddressSchema.describe(
-      'Wallet address whose NFT contract addresses should be listed (0x-prefixed, 40 hex chars)',
-    ),
+    owner: ThorAddressSchema.optional().describe('The address of the NFTs owner'),
+    excludeCollections: z
+      .array(ThorAddressSchema)
+      .max(20)
+      .optional()
+      .describe('Optional list of NFT collection addresses to exclude (max 20)'),
   })
   .extend(paginationParamsSchema.shape)
-  .describe("Parameters for GET /api/v1/nfts/contracts. Provide 'address' (owner) and pagination.")
+  .describe('Base parameters for GET /api/v1/nfts/contracts (owner optional for handler validation)')
+
+export const IndexerGetNFTContractsParamsSchema = IndexerGetNFTContractsParamsBaseSchema.required({
+  owner: true,
+}).describe("Parameters for GET /api/v1/nfts/contracts. Requires 'owner'.")
 

@@ -2,33 +2,36 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
+  IndexerGetNFTsParamsBaseSchema,
   IndexerGetNFTsParamsSchema,
   IndexerNFTAssetSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
+  createIndexerStructuredOutputSchema,
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
-const OutputSchema = createIndexerToolResponseSchema(z.array(IndexerNFTAssetSchema))
-type Response = z.infer<typeof OutputSchema>
+export const IndexerGetNFTsOutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerNFTAssetSchema))
+export const IndexerGetNFTsResponseSchema = createIndexerToolResponseSchema(z.array(IndexerNFTAssetSchema))
+export type IndexerGetNFTsResponse = z.infer<typeof IndexerGetNFTsResponseSchema>
 
 export const getNFTs: MCPTool = {
   name: 'getNFTs',
   title: 'Indexer: List NFTs owned by an address',
   description:
     'Get all NFTs owned by an address using VeWorld Indexer. Endpoint: /api/v1/nfts. Accepts address, optional contractAddress, and pagination (page/size/direction or cursor).',
-  inputSchema: IndexerGetNFTsParamsSchema.shape,
-  outputSchema: OutputSchema.shape,
+  inputSchema: IndexerGetNFTsParamsBaseSchema.shape,
+  outputSchema: IndexerGetNFTsOutputSchema.shape,
   annotations: {
     idempotentHint: false,
     openWorldHint: true,
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async (params: z.infer<typeof IndexerGetNFTsParamsSchema>): Promise<Response> => {
+  handler: async (params: z.infer<typeof IndexerGetNFTsParamsBaseSchema>): Promise<IndexerGetNFTsResponse> => {
     try {
       const parsed = IndexerGetNFTsParamsSchema.parse(params)
 
