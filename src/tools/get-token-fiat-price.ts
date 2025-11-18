@@ -3,7 +3,7 @@ import { getTokenFiatPriceFromCoinGecko, type SupportedFiat, type SupportedToken
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
-const TokenSchema = z.enum(['vet', 'vtho'])
+const TokenSchema = z.enum(['vet', 'vtho', 'b3tr', 'vot3'])
 const FiatSchema = z.enum(['usd', 'eur', 'jpy', 'chf'])
 
 export const TokenFiatPriceDataSchema = z.object({

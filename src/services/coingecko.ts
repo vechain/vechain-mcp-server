@@ -7,6 +7,8 @@ export type SupportedFiat = (typeof SUPPORTED_FIATS)[number]
 const TOKEN_CONFIG = {
   vet: 'vechain',
   vtho: 'vethor-token',
+  b3tr: 'vebetterdao',
+  vot3: 'vebetterdao',
 } as const
 export type SupportedToken = keyof typeof TOKEN_CONFIG
 

@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import { TokenFiatPriceDataSchema } from '@/tools/get-token-fiat-price'
+import { TokenFiatPriceDataSchema } from '../../src/tools/get-token-fiat-price'
 
 describe('getTokenFiatPrice (integration)', () => {
   let client: Client
@@ -53,6 +53,26 @@ describe('getTokenFiatPrice (integration)', () => {
     const data = TokenFiatPriceDataSchema.parse(response.structuredContent)
 
     expect(data.token).toBe('vet')
+    expect(data.fiat).toBe('eur')
+    expect(typeof data.price).toBe('number')
+    expect(data.source).toBe('coingecko')
+    expect(typeof data.error === 'string' || data.error === undefined).toBe(true)
+  })
+
+  test('should get VOT3 price in EUR (shape check)', async () => {
+    const response = await client.callTool({
+      name: 'getTokenFiatPrice',
+      arguments: {
+        token: 'VOT3',
+        fiat: 'EUR',
+      },
+    })
+
+    expect(response.content).toBeDefined()
+
+    const data = TokenFiatPriceDataSchema.parse(response.structuredContent)
+
+    expect(data.token).toBe('vot3')
     expect(data.fiat).toBe('eur')
     expect(typeof data.price).toBe('number')
     expect(data.source).toBe('coingecko')

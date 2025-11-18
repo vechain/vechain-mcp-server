@@ -1,4 +1,4 @@
-import { getTokenFiatPrice, TokenFiatPriceDataSchema } from '@/tools/get-token-fiat-price'
+import { getTokenFiatPrice, TokenFiatPriceDataSchema } from '../../src/tools/get-token-fiat-price'
 
 describe('getTokenFiatPrice tool (unit)', () => {
   const originalFetch = global.fetch
@@ -68,6 +68,38 @@ describe('getTokenFiatPrice tool (unit)', () => {
     expect(data.source).toBe('coingecko')
     expect(typeof data.price).toBe('number')
     expect(data.price).toBe(0.0139)
+    expect(data.error).toBeUndefined()
+  })
+
+  test('returns structured data with price for B3TR in EUR', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({
+        vechain: {
+          usd: 0.0148,
+          eur: 0.0139,
+        },
+        'vethor-token': {
+          usd: 0.001,
+          eur: 0.0009,
+        },
+        vebetterdao: {
+          usd: 0.5,
+          eur: 0.45,
+        },
+      }),
+    })
+
+    const result = await getTokenFiatPrice.handler({ token: 'B3TR', fiat: 'EUR' })
+    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
+
+    expect(data.token).toBe('b3tr')
+    expect(data.fiat).toBe('eur')
+    expect(data.source).toBe('coingecko')
+    expect(typeof data.price).toBe('number')
+    expect(data.price).toBe(0.45)
     expect(data.error).toBeUndefined()
   })
 
