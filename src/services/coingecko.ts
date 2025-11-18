@@ -1,16 +1,28 @@
 import { z } from 'zod'
 import { logger } from '@/utils/logger'
 
-export type SupportedToken = 'vet' | 'vtho'
-export type SupportedFiat = 'usd' | 'eur' | 'jpy' | 'chf'
+const SUPPORTED_FIATS = ['usd', 'eur', 'jpy', 'chf'] as const
+export type SupportedFiat = (typeof SUPPORTED_FIATS)[number]
 
-const CoinGeckoSimplePriceResponseSchema = z.object({
-  vechain: z.record(z.string(), z.number()).optional(),
-  'vethor-token': z.record(z.string(), z.number()).optional(),
-})
+const TOKEN_CONFIG = {
+  vet: 'vechain',
+  vtho: 'vethor-token',
+} as const
+export type SupportedToken = keyof typeof TOKEN_CONFIG
 
-function getCoinGeckoIdForToken(token: SupportedToken): 'vechain' | 'vethor-token' {
-  return token === 'vet' ? 'vechain' : 'vethor-token'
+const coinGeckoShape = {} as Record<
+  (typeof TOKEN_CONFIG)[keyof typeof TOKEN_CONFIG],
+  z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodNumber>>
+>
+
+for (const id of Object.values(TOKEN_CONFIG)) {
+  coinGeckoShape[id] = z.record(z.string(), z.number()).optional()
+}
+
+const CoinGeckoSimplePriceResponseSchema = z.object(coinGeckoShape)
+
+function getCoinGeckoIdForToken(token: SupportedToken): (typeof TOKEN_CONFIG)[SupportedToken] {
+  return TOKEN_CONFIG[token]
 }
 
 /**
@@ -19,8 +31,8 @@ function getCoinGeckoIdForToken(token: SupportedToken): 'vechain' | 'vethor-toke
 async function fetchCoinGeckoPrices(): Promise<z.infer<typeof CoinGeckoSimplePriceResponseSchema>> {
   const baseUrl = process.env.COINGECKO_BASE_URL || 'https://api.coingecko.com'
   const url = new URL('/api/v3/simple/price', baseUrl)
-  url.searchParams.set('ids', 'vechain,vethor-token')
-  url.searchParams.set('vs_currencies', 'usd,eur,jpy,chf')
+  url.searchParams.set('ids', Object.values(TOKEN_CONFIG).join(','))
+  url.searchParams.set('vs_currencies', SUPPORTED_FIATS.join(','))
 
   logger.debug(`Fetching prices from CoinGecko: ${url.toString()}`)
 
