@@ -73,12 +73,14 @@ const paginationSchema = z.object({
   totalPages: z.number().nullable().optional(),
   totalElements: z.number().nullable().optional(),
   hasNext: z.boolean(),
-})
+}).describe('Pagination metadata returned by the Indexer')
 
 const indexerResponseSchema = <T extends z.ZodSchema>(schema: T) =>
-  z.object({
-    data: z.array(schema),
-    pagination: paginationSchema,
-  })
+  z
+    .object({
+      data: z.array(schema),
+      pagination: paginationSchema,
+    })
+    .describe('Generic Indexer list response: data array with pagination')
 
 type IndexerResponse<T extends z.ZodSchema> = z.infer<ReturnType<typeof indexerResponseSchema<T>>>
