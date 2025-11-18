@@ -1,7 +1,11 @@
 import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
-import { IndexerGetTransfersParamsSchema, IndexerTransferSchema } from '@/services/veworld-indexer/schemas'
+import {
+  IndexerGetTransfersParamsBaseSchema,
+  IndexerGetTransfersParamsSchema,
+  IndexerTransferSchema,
+} from '@/services/veworld-indexer/schemas'
 
 import {
   createIndexerStructuredOutputSchema,
@@ -23,9 +27,10 @@ type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOfRespons
  */
 export const getTransfersOfAccount: MCPTool = {
   name: 'getTransfersOfAccount',
-  title: 'Get Transfer events of account',
-  description: 'Get the Transfer events of a given address or token address',
-  inputSchema: IndexerGetTransfersParamsSchema.shape,
+  title: 'Indexer: List transfers for wallet or token (v1)',
+  description:
+    "Query transfer events using VeWorld Indexer /api/v1/transfers. Provide either 'address' (wallet) or 'tokenAddress' (ERC-20) plus optional pagination. Use for 'wallet transfers', 'token movements', or 'activity for contract/wallet'.",
+  inputSchema: IndexerGetTransfersParamsBaseSchema.shape,
   outputSchema: IndexerGetTransfersOfOutputSchema.shape,
   annotations: {
     idempotentHint: false,
@@ -33,9 +38,15 @@ export const getTransfersOfAccount: MCPTool = {
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
+  handler: async (
+    params: z.infer<typeof IndexerGetTransfersParamsBaseSchema>,
+  ): Promise<IndexerGetTransfersOfResponse> => {
     try {
-      const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
+      IndexerGetTransfersParamsSchema.parse(params)
+      const response = await veworldIndexerGet<
+        typeof IndexerTransferSchema,
+        typeof IndexerGetTransfersParamsBaseSchema
+      >({
         endPoint: '/api/v1/transfers',
         params,
       })
