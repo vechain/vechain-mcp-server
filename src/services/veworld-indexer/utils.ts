@@ -8,12 +8,14 @@ import { logger } from '@/utils/logger'
  * @returns Zod schema for Indexer structured output
  */
 function createIndexerStructuredOutputSchema<T extends z.ZodType>(dataSchema: T) {
-  return z.object({
-    ok: z.boolean(),
-    network: z.nativeEnum(ThorNetworkType),
-    data: dataSchema.optional().nullable(),
-    error: z.string().optional(),
-  })
+  return z
+    .object({
+      ok: z.boolean(),
+      network: z.nativeEnum(ThorNetworkType),
+      data: dataSchema.optional().nullable(),
+      error: z.string().optional(),
+    })
+    .describe('VeWorld Indexer structured output payload used by MCP tools')
 }
 
 /**
@@ -22,10 +24,12 @@ function createIndexerStructuredOutputSchema<T extends z.ZodType>(dataSchema: T)
  * @returns Zod schema for Indexer tool response
  */
 function createIndexerToolResponseSchema<T extends z.ZodType>(dataSchema: T) {
-  return z.object({
-    content: z.array(z.object({ type: z.string(), text: z.string() })),
-    structuredContent: createIndexerStructuredOutputSchema<T>(dataSchema),
-  })
+  return z
+    .object({
+      content: z.array(z.object({ type: z.string(), text: z.string() })),
+      structuredContent: createIndexerStructuredOutputSchema<T>(dataSchema),
+    })
+    .describe('MCP tool response wrapper for VeWorld Indexer queries')
 }
 
 /**
