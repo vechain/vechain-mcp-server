@@ -12,16 +12,7 @@ const TOKEN_CONFIG = {
 } as const
 export type SupportedToken = keyof typeof TOKEN_CONFIG
 
-const coinGeckoShape = {} as Record<
-  (typeof TOKEN_CONFIG)[keyof typeof TOKEN_CONFIG],
-  z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodNumber>>
->
-
-for (const id of Object.values(TOKEN_CONFIG)) {
-  coinGeckoShape[id] = z.record(z.string(), z.number()).optional()
-}
-
-const CoinGeckoSimplePriceResponseSchema = z.object(coinGeckoShape)
+const CoinGeckoSimplePriceResponseSchema = z.record(z.string(), z.record(z.string(), z.number()).optional())
 
 function getCoinGeckoIdForToken(token: SupportedToken): (typeof TOKEN_CONFIG)[SupportedToken] {
   return TOKEN_CONFIG[token]
