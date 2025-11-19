@@ -3,7 +3,7 @@ import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetTransfersParamsBaseSchema,
-  type IndexerGetTransfersParamsSchema,
+  IndexerGetTransfersParamsSchema,
   IndexerTransferSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
