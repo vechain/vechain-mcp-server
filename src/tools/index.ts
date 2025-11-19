@@ -27,3 +27,4 @@ export { getStargateVthoGeneratedByPeriod } from './get-stargate-vtho-generated-
 export { getStargateVthoClaimedByPeriod } from './get-stargate-vtho-claimed-by-period'
 export { getStargateVetStakedByPeriod } from './get-stargate-vet-staked-by-period'
 export { getStargateVetDelegatedByPeriod } from './get-stargate-vet-delegated-by-period'
+export { getStargateTokens } from './get-stargate-tokens'

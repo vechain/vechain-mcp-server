@@ -331,3 +331,35 @@ export const IndexerStargateMetricsByPeriodSchema = z
   )
 
 // (dedicated total-vtho-generated schemas are defined above)
+
+// ***************************** Stargate tokens *****************************/
+export const IndexerGetStargateTokensParamsSchema = z
+  .object({
+    owner: ThorAddressSchema.optional().describe('Filter stargate nfts by current owner address'),
+    manager: ThorAddressSchema.optional().describe('Filter stargate nft tokens by manager address'),
+    tokenId: z
+      .string()
+      .regex(/^[0-9]+$/, 'tokenId must be a numeric string')
+      .optional()
+      .describe('Filter by specific tokenId'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/stargate/tokens')
+
+export const IndexerStargateTokenSchema = z
+  .object({
+    tokenId: z.string().describe('Stargate token id (stringified number)'),
+    level: z.string().describe('Stargate NFT level'),
+    owner: ThorAddressSchema.describe('Current owner wallet address'),
+    manager: ThorAddressSchema.nullable().describe('Optional manager address, a manager is a wallet that can manage the token'),
+    delegationStatus: z.string().describe('Delegation status for the token, can be "QUEUED", "ACTIVE", "EXITING" or "EXITED"'),
+    validatorId: z.string().nullable().describe('Validator id if delegated, the validator that the token is delegated to'),
+    totalRewardsClaimed: z.string().describe('Total VTHO claimed (string format), the total amount of VTHO claimed by the token, post hayabusa'),
+    totalBootstrapRewardsClaimed: z
+      .string()
+      .describe('Total bootstrap VTHO claimed (string format), the total amount of VTHO claimed by the token, pre hayabusa'),
+    vetStaked: z.string().describe('VET staked amount (string format, wei)'),
+    migrated: z.boolean().describe('Whether the token was migrated from old vechain nodes staking platform'),
+    boosted: z.boolean().describe('Whether the token was boosted to skip the maturity period'),
+  })
+  .describe('Stargate token summary record')
