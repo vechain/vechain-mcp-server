@@ -549,3 +549,88 @@ export const AccountsTotalsParamsSchema = z
 
 // ***************************** Accounts Overview (Thor Accounts) *****************************/
  
+
+// ***************************** Validators *****************************/
+export const IndexerValidatorStatusSchema = z
+  .enum(['NONE', 'QUEUED', 'ACTIVE', 'EXITED', 'EXITING'])
+  .describe('Validator status')
+
+export const IndexerValidatorsSortBySchema = z
+  .enum([
+    'validatorTvl',
+    'totalTvl',
+    'blockProbability',
+    'delegatorTvl',
+    // NFT level-specific APY sort keys
+    'nft:Strength',
+    'nft:Thunder',
+    'nft:Mjolnir',
+    'nft:VeThorX',
+    'nft:StrengthX',
+    'nft:ThunderX',
+    'nft:MjolnirX',
+    'nft:Dawn',
+    'nft:Lightning',
+    'nft:Flash',
+  ])
+  .describe('Supported sort keys for validators')
+
+export const IndexerValidatorSchema = z
+  .object({
+    id: z.string().describe('Validator ID (address-like)'),
+    blockId: ThorBlockIdSchema,
+    blockNumber: ThorBlockNumberSchema,
+    blockTimestamp: z.number(),
+    endorser: ThorAddressSchema.describe('Validator endorser address, this address is responsible for endorsing the validator'),
+    status: IndexerValidatorStatusSchema,
+    vetStaked: z.number().describe('Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts)'),
+    validatorVetStaked: z.number().describe('VET staked by the validator directly'),
+    delegatorVetStaked: z.number().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
+    queuedVetStaked: z.number().describe('Total queued VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
+    exitingVetStaked: z.number().describe('Total exiting VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
+    cycleEndBlock: z.number().describe('Block number of the end of the current cycle'),
+    blockProbability: z.number().describe('Probability of the validator being selected to produce a block, based on the validator weight which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2'),
+    blocksPerEpoch: z.number().describe('Number of blocks per epoch'),
+    totalTvl: z.number().describe('Total value locked (USD) of the validator (endorsers TVL + TVL from delegations from stargate nfts)'),
+    validatorTvl: z.number().describe('Value locked (USD) of the validator directly'),
+    delegatorTvl: z.number().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
+    tvlBasedYield: z.number().describe('Yield of the validator based on the value locked (USD) of the validator and the delegators (Stargate NFTs), yield is effected by block probability of the validator'),
+    nftYieldsNextCycle: z
+      .object({
+        Strength: z.number().describe('Projected next-cycle yield for the Strength Stargate NFT level')  ,
+        Thunder: z.number().describe('Projected next-cycle yield for the Thunder Stargate NFT level')  ,    
+        Mjolnir: z.number().describe('Projected next-cycle yield for the Mjolnir Stargate NFT level')  ,
+        VeThorX: z.number().describe('Projected next-cycle yield for the VeThorX Stargate NFT level')  ,
+        StrengthX: z.number().describe('Projected next-cycle yield for the StrengthX Stargate NFT level')  ,
+        ThunderX: z.number().describe('Projected next-cycle yield for the ThunderX Stargate NFT level')  ,
+        MjolnirX: z.number().describe('Projected next-cycle yield for the MjolnirX Stargate NFT level')  ,
+        Dawn: z.number().describe('Projected next-cycle yield for the Dawn Stargate NFT level')  ,
+        Lightning: z.number().describe('Projected next-cycle yield for the Lightning Stargate NFT level')  ,
+        Flash: z.number().describe('Projected next-cycle yield for the Flash Stargate NFT level')  ,
+      })
+      .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
+    totalWeight: z.number().describe('Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2'),
+    online: z.boolean().describe('Whether the validator is online'),
+    completedPeriods: z.number().describe('Number of completed periods of the validator'),
+    startBlock: z.number().describe('Block number of the start of the current cycle'),
+    cyclePeriodLength: z.number().describe('Length of the current cycle in blocks'),
+    blocksPerYear: z.number().describe('Number of blocks per year'),
+    percentageOffline: z.number().describe('Percentage of time the validator has been offline'),
+    offlineBlocks: z.number().describe('Number of blocks the validator has been offline'),
+  })
+  .passthrough()
+  .describe('Validator stats entry as returned by /api/v1/validators')
+
+export const IndexerGetValidatorsParamsSchema = z
+  .object({
+    endorser: ThorAddressSchema.optional().describe('Filter by endorser address'),
+    validatorId: ThorAddressSchema.optional().describe('Filter by validator ID'),
+    status: IndexerValidatorStatusSchema.optional().describe('Filter by validator status'),
+    sortBy: IndexerValidatorsSortBySchema.optional().describe('Sort field for the results'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/validators')
+
+export const IndexerValidatorsResponseSchema = indexerResponseSchema(IndexerValidatorSchema).describe(
+  'List response for validators',
+)

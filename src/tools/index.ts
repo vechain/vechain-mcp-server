@@ -38,3 +38,4 @@ export { getStargateTotalVetStakedHistoric } from './get-stargate-total-vet-stak
 export { getVevoteHistoricProposals } from './get-vevote-historic-proposals'
 export { getVevoteProposalResults } from './get-vevote-proposal-results'
 export { getAccountsTotals } from './get-accounts-totals'
+export { getValidators } from './get-validators'
