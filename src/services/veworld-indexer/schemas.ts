@@ -686,3 +686,55 @@ export const IndexerGetValidatorDelegationsParamsSchema = z
 export const IndexerValidatorDelegationsResponseSchema = indexerResponseSchema(
   IndexerDelegationSchema,
 ).describe('List response for validator delegations')
+
+// ***************************** Validator block rewards *****************************/
+export const IndexerValidatorBlockStatusSchema = z
+  .enum(['VALIDATED', 'MISSED'])
+  .describe('Block result status for the validator')
+
+export const IndexerValidatorBlockRewardSchema = z
+  .object({
+    blockId: ThorBlockIdSchema.describe('Block hash'),
+    blockNumber: ThorBlockNumberSchema,
+    blockTimestamp: z.number().describe('Block timestamp (Unix seconds)'),
+    validator: ThorAddressSchema.describe('Validator address'),
+    blockReward: z.string().describe('Base VTHO reward for producing the block (as string)'),
+    priorityReward: z.string().describe('Priority fee rewards from users bidding in mempool (as string)'),
+    total: z.string().describe('Sum of blockReward and priorityReward (as string)'),
+    status: IndexerValidatorBlockStatusSchema,
+    delegatorRewards: z
+      .string()
+      .describe(
+        'Portion of total distributed to delegators (Stargate NFTs). Typically 70% when delegations are present.',
+      ),
+    validatorRewards: z
+      .string()
+      .describe('Portion of total retained by the validator after delegator share.'),
+  })
+  .describe('Per-block reward breakdown for a validator')
+
+export const IndexerGetValidatorBlockRewardsParamsSchema = z
+  .object({
+    blockNumber: ThorBlockNumberSchema.optional().describe('Optional specific block number to query'),
+    validator: ThorAddressSchema.optional().describe('Optional validator address filter'),
+    status: IndexerValidatorBlockStatusSchema.optional().describe("Filter by block status ('VALIDATED' or 'MISSED')"),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/validators/blocks')
+
+export const IndexerValidatorBlockRewardsResponseSchema = indexerResponseSchema(
+  IndexerValidatorBlockRewardSchema,
+).describe('List response for validator block rewards')
+
+// ***************************** Validator missed blocks percentage *****************************/
+export const IndexerGetValidatorMissedPercentageParamsSchema = z
+  .object({
+    validator: ThorAddressSchema.describe('Validator address (path parameter)'),
+    startBlock: ThorBlockNumberSchema.describe('Start block, inclusive'),
+    endBlock: ThorBlockNumberSchema.optional().describe('Optional end block, inclusive; defaults to best/latest'),
+  })
+  .describe('Params for GET /api/v1/validators/blocks/missed/{validator}')
+
+export const IndexerValidatorMissedPercentageSchema = z
+  .number()
+  .describe('Percentage of missed blocks in the given range (0..100, not a decimal)')
