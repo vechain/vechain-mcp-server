@@ -35,3 +35,4 @@ export { getStargateNftHoldersHistoric } from './get-stargate-nft-holders-histor
 export { getStargateTotalVthoGeneratedHistoric } from './get-stargate-total-vtho-generated-historic'
 export { getStargateTotalVthoClaimedHistoric } from './get-stargate-total-vtho-claimed-historic'
 export { getStargateTotalVetStakedHistoric } from './get-stargate-total-vet-staked-historic'
+export { getVevoteHistoricProposals } from './get-vevote-historic-proposals'

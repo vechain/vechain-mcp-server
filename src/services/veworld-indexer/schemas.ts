@@ -456,3 +456,39 @@ export const IndexerGetNftHoldersHistoricParamsSchema = z
     level: IndexerStargateLevelSchema.optional(),
   })
   .describe('Params for GET /api/v1/stargate/nft-holders/historic/{range}')
+
+// ***************************** VeVote historic proposals *****************************/
+export const VevoteHistoricProposalSchema = z
+  .object({
+    id: z.string().describe('Unique identifier for the proposal made up of the contract address and the proposal id'),
+    proposalId: z.string().describe('Legacy proposal id'),
+    contractAddress: ThorAddressSchema.describe('Legacy smart contract address, there are two main contracts for governance: 0xa6416a72f816d3a69f33d0814700545c8e3fe4be (Stakeholder Governance) and 0x7e54f0790153647ec0651c35ced28171adb5d44a (Steering Committee Governance)'),
+    createdDate: z.string().optional().describe('Date the proposal was created'),
+    proposer: ThorAddressSchema.describe('Address of the proposer'),
+    title: z.string().describe('Title of the proposal'),
+    description: z.string().describe('Description of the proposal'),
+    choices: z.array(z.string()).describe('Choices for the proposal'),
+    createTime: z.number().describe('Unix timestamp when the proposal was created'),
+    votingStartTime: z.number().describe('Unix timestamp when voting starts'),
+    votingEndTime: z.number().describe('Unix timestamp when voting ends'),
+    voteTallies: z.array(z.number()).describe('Per-choice vote tallies'),
+    totalVotes: z.number().describe('Total number of votes cast'),
+    blockId: ThorBlockIdSchema.describe('Block id of creation'),
+    blockNumber: ThorBlockNumberSchema.describe('Block number of creation'),
+    blockTimestamp: z.number().describe('Block timestamp (Unix seconds) of creation'),
+  })
+  .passthrough()
+  .describe('Legacy VeVote/ VeChain governance historic proposal entry')
+
+export const VevoteHistoricProposalsParamsSchema = z
+  .object({
+    proposalId: z.string().optional().describe('Filter by legacy proposal id'),
+    contractAddress: ThorAddressSchema.optional().describe('Filter by legacy smart contract address, there are two main contracts for governance: 0xa6416a72f816d3a69f33d0814700545c8e3fe4be (Stakeholder Governance) and 0x7e54f0790153647ec0651c35ced28171adb5d44a (Steering Committee Governance)'),
+    testProposals: z.boolean().default(false).describe('Include test proposals when true'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/vevote/historic-proposals')
+
+export const VevoteHistoricProposalsResponseSchema = indexerResponseSchema(
+  VevoteHistoricProposalSchema,
+).describe('List response for legacy VeVote historic proposals')
