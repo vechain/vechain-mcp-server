@@ -398,3 +398,8 @@ export const IndexerStargateTokenRewardSchema = z
     year: z.number().optional().describe('Year'),
   })
   .describe('A single period-based reward entry for a Stargate token')
+
+// ***************************** Stargate NFT holders *****************************/
+export const IndexerStargateNftHoldersTotalSchema = z
+  .string()
+  .describe('Total number of Stargate NFTs held by users represented as a JSON string (API returns plain string)')

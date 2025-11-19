@@ -31,6 +31,7 @@ export function createMetricsByPeriodTool(config: {
     | '/api/v1/stargate/vtho-claimed'
     | '/api/v1/stargate/vet-staked'
     | '/api/v1/stargate/vet-delegated'
+    | '/api/v1/stargate/nft-holders'
   description: string
 }): MCPTool {
   const { name, title, pathPrefix, description } = config
