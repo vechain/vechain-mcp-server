@@ -494,7 +494,7 @@ export const VevoteHistoricProposalsResponseSchema = indexerResponseSchema(
 ).describe('List response for legacy VeVote historic proposals')
 
 // ***************************** VeVote proposal results (current governance) *****************************/
-export const VevoteSupportEnumSchema = z.enum(['AGAINST', 'FOR', 'ABSTAIN'])
+export const VevoteSupportEnumSchema = z.enum(['AGAINST', 'FOR', 'ABSTAIN']).describe('Support enum for the proposal, can be "AGAINST", "FOR" or "ABSTAIN"')
 
 export const VevoteProposalResultSchema = z
   .object({
@@ -502,8 +502,8 @@ export const VevoteProposalResultSchema = z
     blockTimestamp: z.number(),
     proposalId: z.string(),
     support: VevoteSupportEnumSchema,
-    totalWeight: z.number(),
-    totalVoters: z.number(),
+    totalWeight: z.number().describe('Total weight of votes for the support'),
+    totalVoters: z.number().describe('Total number of voters'),
   })
   .describe('Aggregate voting result per support for a proposal or overall support')
 
@@ -523,3 +523,29 @@ export const VevoteProposalResultsParamsSchema = VevoteProposalResultsParamsBase
 export const VevoteProposalResultsResponseSchema = indexerResponseSchema(
   VevoteProposalResultSchema,
 ).describe('List response for VeVote proposal results')
+
+// ***************************** Accounts overview *****************************/
+export const AccountsTimeFrameEnumSchema = z
+  .enum(['DAY', 'WEEK', 'MONTH', 'YEAR', 'ALL'])
+  .describe('Time frame for accounts totals')
+
+export const AccountsTotalsItemSchema = z
+  .object({
+    total: z.number(),
+    timeFrame: AccountsTimeFrameEnumSchema,
+    dayOfMonth: z.number().optional(),
+    weekOfYear: z.number().optional(),
+    month: z.number().optional(),
+    year: z.number().optional(),
+  })
+  .describe('Accounts totals entry for a given timeframe bucket or ALL')
+
+export const AccountsTotalsParamsSchema = z
+  .object({
+    timeFrame: AccountsTimeFrameEnumSchema.optional().describe('DAY, WEEK, MONTH, YEAR, ALL; omitted defaults to ALL'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/accounts/totals')
+
+// ***************************** Accounts Overview (Thor Accounts) *****************************/
+ 
