@@ -35,7 +35,7 @@ export const veworldIndexerGet = async <
     }
 
     const data = (await response.json()) as IndexerResponse<T>
-    logger.debug(`Fetch success: ${JSON.stringify(data, null, 2)}`)
+    logger.debug(`VeWorld Indexer fetch success: ${JSON.stringify(data, null, 2)}`)
 
     return data
   } catch (error) {

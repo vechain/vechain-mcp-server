@@ -37,6 +37,7 @@
     "@modelcontextprotocol/sdk": "^1.20.1",
     "@vechain/sdk-core": "^2.0.5",
     "@vechain/sdk-network": "^2.0.5",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "tslog": "^4.10.2",
     "viem": "^2.38.5",
@@ -44,7 +45,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.7",
-    "@modelcontextprotocol/inspector": "^0.17.1",
+    "@modelcontextprotocol/inspector": "^0.17.2",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.9.1",
