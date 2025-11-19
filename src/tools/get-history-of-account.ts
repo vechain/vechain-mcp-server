@@ -1,13 +1,12 @@
-import type { z } from 'zod'
+import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
+import { IndexedHistoryEventSchema, IndexerGetHistoryParamsSchema } from '@/services/veworld-indexer/schemas'
 import {
-  type IndexedHistoryEventSchema,
-  type IndexerGetHistoryOfAccountResponseType,
-  IndexerGetHistoryOfAccountStructuredSchema,
-  IndexerGetHistoryParamsSchema,
-} from '@/services/veworld-indexer/schemas'
-import { indexerErrorResponse } from '@/services/veworld-indexer/utils'
+  createIndexerStructuredOutputSchema,
+  createIndexerToolResponseSchema,
+  indexerErrorResponse,
+} from '@/services/veworld-indexer/utils'
 
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
@@ -15,7 +14,18 @@ import { logger } from '@/utils/logger'
 /**
  * Schemas for get history of account tool outputs
  */
+
 const IndexerGetHistoryQueryParamsSchema = IndexerGetHistoryParamsSchema.omit({ address: true })
+
+export const IndexerGetHistoryOfAccountDataSchema = z.array(IndexedHistoryEventSchema)
+
+export const IndexerGetHistoryOfAccountOutputSchema = createIndexerStructuredOutputSchema(
+  IndexerGetHistoryOfAccountDataSchema,
+)
+export const IndexerGetHistoryOfAccountResponseSchema = createIndexerToolResponseSchema(
+  IndexerGetHistoryOfAccountDataSchema,
+)
+type IndexerGetHistoryOfAccountResponse = z.infer<typeof IndexerGetHistoryOfAccountResponseSchema>
 
 /**
  * Tool for getting transaction history of a given account
@@ -26,7 +36,7 @@ export const getHistoryOfAccount: MCPTool = {
   title: 'Get History of account',
   description: 'Get the transaction history of a given address',
   inputSchema: IndexerGetHistoryParamsSchema.shape,
-  outputSchema: IndexerGetHistoryOfAccountStructuredSchema.shape,
+  outputSchema: IndexerGetHistoryOfAccountOutputSchema.shape,
   annotations: {
     idempotentHint: false,
     openWorldHint: true,
@@ -35,7 +45,7 @@ export const getHistoryOfAccount: MCPTool = {
   },
   handler: async (
     params: z.infer<typeof IndexerGetHistoryParamsSchema>,
-  ): Promise<IndexerGetHistoryOfAccountResponseType> => {
+  ): Promise<IndexerGetHistoryOfAccountResponse> => {
     try {
       const { address, ...queryParams } = params
       const response = await veworldIndexerGet<
