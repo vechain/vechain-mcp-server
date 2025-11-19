@@ -403,3 +403,56 @@ export const IndexerStargateTokenRewardSchema = z
 export const IndexerStargateNftHoldersTotalSchema = z
   .string()
   .describe('Total number of Stargate NFTs held by users represented as a JSON string (API returns plain string)')
+
+// Historic totals (running totals time-series)
+export const IndexerHistoricRangeSchema = z
+  .enum(['1-hour', '1-day', '1-week', '1-month', '1-year', 'all'])
+  .describe('Preset time range to consider for historic totals: 1-hour | 1-day | 1-week | 1-month | 1-year | all')
+
+export const IndexerStargateLevelSchema = z
+  .enum([
+    'Strength',
+    'Thunder',
+    'Mjolnir',
+    'VeThorX',
+    'StrengthX',
+    'ThunderX',
+    'MjolnirX',
+    'Dawn',
+    'Lightning',
+    'Flash',
+  ])
+  .describe('Stargate NFT level')
+
+export const IndexerHistoricPointSchema = z
+  .object({
+    timestamp: z.number(),
+    value: z.number(),
+  })
+  .describe('Historic running-total point')
+
+export const IndexerGetTotalVthoGeneratedHistoricParamsSchema = z
+  .object({
+    range: IndexerHistoricRangeSchema,
+  })
+  .describe('Params for GET /api/v1/stargate/total-vtho-generated/historic/{range}')
+
+export const IndexerGetTotalVthoClaimedHistoricParamsSchema = z
+  .object({
+    range: IndexerHistoricRangeSchema,
+  })
+  .describe('Params for GET /api/v1/stargate/total-vtho-claimed/historic/{range}')
+
+export const IndexerGetTotalVetStakedHistoricParamsSchema = z
+  .object({
+    range: IndexerHistoricRangeSchema,
+    level: IndexerStargateLevelSchema.optional(),
+  })
+  .describe('Params for GET /api/v1/stargate/total-vet-staked/historic/{range}')
+
+export const IndexerGetNftHoldersHistoricParamsSchema = z
+  .object({
+    range: IndexerHistoricRangeSchema,
+    level: IndexerStargateLevelSchema.optional(),
+  })
+  .describe('Params for GET /api/v1/stargate/nft-holders/historic/{range}')
