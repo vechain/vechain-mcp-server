@@ -10,7 +10,8 @@ export const TokenFiatPriceDataSchema = z.object({
   token: TokenSchema,
   fiat: FiatSchema,
   price: z
-    .union([z.number(), z.nan()])
+    .union([z.number(), z.nan(), z.null()])
+    .transform(val => (val === null ? NaN : val))
     .describe('Current price of the token in the selected fiat currency; NaN when unavailable'),
   source: z.literal('coingecko'),
   error: z.string().optional().describe('Optional error message if the price could not be fetched'),

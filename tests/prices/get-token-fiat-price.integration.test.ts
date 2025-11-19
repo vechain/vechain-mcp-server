@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import { TokenFiatPriceDataSchema } from '../../src/tools/get-token-fiat-price'
+import { TokenFiatPriceDataSchema } from '@/tools/get-token-fiat-price'
 
 describe('getTokenFiatPrice (integration)', () => {
   let client: Client

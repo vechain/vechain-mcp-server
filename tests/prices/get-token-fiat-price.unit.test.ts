@@ -1,4 +1,4 @@
-import { getTokenFiatPrice, TokenFiatPriceDataSchema } from '../../src/tools/get-token-fiat-price'
+import { getTokenFiatPrice, TokenFiatPriceDataSchema } from '@/tools/get-token-fiat-price'
 
 describe('getTokenFiatPrice tool (unit)', () => {
   const originalFetch = global.fetch
