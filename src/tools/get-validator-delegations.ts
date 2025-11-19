@@ -9,6 +9,8 @@ import {
   createIndexerStructuredOutputSchema,
   createIndexerToolResponseSchema,
   indexerErrorResponse,
+  validatorEndpointsAvailable,
+  validatorEndpointsUnavailableMessage,
 } from '@/services/veworld-indexer/utils'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
@@ -40,6 +42,9 @@ export const getValidatorDelegations: MCPTool = {
     params: z.infer<typeof IndexerGetValidatorDelegationsParamsSchema>,
   ): Promise<IndexerGetValidatorDelegationsResponse> => {
     try {
+      if (!(await validatorEndpointsAvailable())) {
+        return indexerErrorResponse(validatorEndpointsUnavailableMessage())
+      }
       const parsed = IndexerGetValidatorDelegationsParamsSchema.parse(params ?? {})
       const { statuses, ...rest } = parsed as any
       const response = await veworldIndexerGet<typeof IndexerDelegationSchema>({
