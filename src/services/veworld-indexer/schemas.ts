@@ -634,3 +634,55 @@ export const IndexerGetValidatorsParamsSchema = z
 export const IndexerValidatorsResponseSchema = indexerResponseSchema(IndexerValidatorSchema).describe(
   'List response for validators',
 )
+
+// ***************************** Validator Delegations *****************************/
+export const IndexerDelegationStatusSchema = z
+  .enum(['QUEUED', 'ACTIVE', 'EXITED', 'EXITING'])
+  .describe('Delegation status')
+
+export const IndexerDelegationSchema = z
+  .object({
+    id: z.string().describe('Unique delegation id'),
+    validator: ThorAddressSchema.describe('Validator address the NFT is/was delegated to'),
+    tokenId: z.string().describe('Stargate NFT token id (stringified number)'),
+    owner: ThorAddressSchema.describe('Owner wallet address of the NFT at the time of delegation'),
+    status: IndexerDelegationStatusSchema,
+    tokenLevel: z
+      .enum([
+        'Strength',
+        'Thunder',
+        'Mjolnir',
+        'VeThorX',
+        'StrengthX',
+        'ThunderX',
+        'MjolnirX',
+        'Dawn',
+        'Lightning',
+        'Flash',
+      ])
+      .describe('Stargate NFT level at the time of delegation'),
+    stakedAmount: z.string().describe('Amount of VET staked (wei, as string)'),
+    totalRewardsClaimed: z.string().describe('Total VTHO claimed (as string)'),
+  })
+  .describe('A delegation record as returned by /api/v1/validators/delegations')
+
+export const IndexerGetValidatorDelegationsParamsSchema = z
+  .object({
+    validator: ThorAddressSchema.optional().describe('Filter delegations by validator address'),
+    tokenId: z
+      .string()
+      .regex(/^[0-9]+$/, 'tokenId must be a numeric string')
+      .optional()
+      .describe('Filter by specific tokenId'),
+    statuses: z
+      .array(z.enum(['QUEUED', 'ACTIVE', 'EXITED', 'EXITING']))
+      .max(5)
+      .optional()
+      .describe('Filter by one or more delegation statuses'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/validators/delegations')
+
+export const IndexerValidatorDelegationsResponseSchema = indexerResponseSchema(
+  IndexerDelegationSchema,
+).describe('List response for validator delegations')
