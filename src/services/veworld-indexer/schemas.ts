@@ -363,3 +363,38 @@ export const IndexerStargateTokenSchema = z
     boosted: z.boolean().describe('Whether the token was boosted to skip the maturity period'),
   })
   .describe('Stargate token summary record')
+
+// ***************************** Stargate token rewards *****************************/
+export const IndexerStargateRewardPeriodSchema = z
+  .string()
+  .transform(p => p.toUpperCase())
+  .pipe(z.enum(['CYCLE', 'DAY', 'WEEK', 'MONTH', 'YEAR', 'ALL']))
+  .describe('Reward period type to aggregate rewards by')
+
+export const IndexerGetStargateTokenRewardsParamsSchema = z
+  .object({
+    tokenId: z
+      .string()
+      .regex(/^[0-9]+$/, 'tokenId must be a numeric string')
+      .describe('The tokenId to query for rewards'),
+    validator: ThorAddressSchema.optional().describe('Optional validator address filter'),
+    periodType: IndexerStargateRewardPeriodSchema.describe(
+      'Reward period to aggregate by (CYCLE, DAY, WEEK, MONTH, YEAR, ALL)',
+    ),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Params for GET /api/v1/stargate/token-rewards/{tokenId}')
+
+export const IndexerStargateTokenRewardSchema = z
+  .object({
+    tokenId: z.string().describe('Stargate token id (stringified number)'),
+    cycle: z.number().optional().describe('Validator cycle number'),
+    validator: ThorAddressSchema.describe('Validator address'),
+    rewards: z.string().describe('Amount as string'),
+    rewardPeriod: z.string().describe('The type of reward period, can be "CYCLE", "DAY", "WEEK", "MONTH", "YEAR", "ALL"'),
+    dayOfMonth: z.number().optional().describe('Day of month'),
+    weekOfYear: z.number().optional().describe('Week of year'),
+    month: z.number().optional().describe('Month, 1-12'),
+    year: z.number().optional().describe('Year'),
+  })
+  .describe('A single period-based reward entry for a Stargate token')

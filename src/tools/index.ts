@@ -28,3 +28,4 @@ export { getStargateVthoClaimedByPeriod } from './get-stargate-vtho-claimed-by-p
 export { getStargateVetStakedByPeriod } from './get-stargate-vet-staked-by-period'
 export { getStargateVetDelegatedByPeriod } from './get-stargate-vet-delegated-by-period'
 export { getStargateTokens } from './get-stargate-tokens'
+export { getStargateTokenRewards } from './get-stargate-token-rewards'
