@@ -1,3 +1,5 @@
+export { getHistoryOfAccount } from './get-history-of-account'
+export { getTokenFiatPrice } from './get-token-fiat-price'
 export { getTransfersOfAccount } from './get-transfers-of-account'
 export { getTransfersTo } from './get-transfers-to'
 export { getTransfersFrom } from './get-transfers-from'

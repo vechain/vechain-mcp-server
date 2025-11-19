@@ -1,6 +1,5 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { initThor } from '@/services/thor'
 import * as tools from '@/tools'
 import { logger } from '@/utils/logger'
@@ -34,7 +33,7 @@ export async function initServer() {
   }
 }
 
-export async function cleanupServer(transport?: Transport) {
+export async function cleanupServer() {
   logger.info('Shutting down server...')
   for (const [name, client] of Object.entries(upstreamClients) as [keyof UpstreamClients, Client][]) {
     try {
@@ -44,16 +43,6 @@ export async function cleanupServer(transport?: Transport) {
       logger.error(`Error closing ${name}:`, error)
     }
   }
-
-  if (transport) {
-    try {
-      await transport.close()
-      logger.error('Closed transport')
-    } catch (error) {
-      logger.error('Error closing transport:', error)
-    }
-  }
-
   await server.close()
   process.exit(0)
 }

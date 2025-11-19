@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import {
   type IndexerGetTransfersOfResponse,
   IndexerGetTransfersOfResponseSchema,
-} from '../../src/tools/get-transfers-of-account'
+} from '@/tools/get-transfers-of-account'
 
 describe('Indexer Get Transfers Of Account', () => {
   let client: Client
@@ -25,19 +25,17 @@ describe('Indexer Get Transfers Of Account', () => {
     const response = await client.callTool({
       name: 'getTransfersOfAccount',
       arguments: {
-        address: '0x14A65f53750E47654a833AF9D3b6619D04DA11aE',
+        address: '0x8D5195504DD1CdD8be425B03ae70EEfa011D25aF',
       },
     })
     expect(response.content).toBeDefined()
+    expect(response.structuredContent).toBeDefined()
     const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
     const structuredData = structured.structuredContent
     expect(structuredData.network).toBeDefined()
-    expect(typeof structuredData.ok).toBe('boolean')
-    if (structuredData.ok) {
-      expect(Array.isArray(structuredData.data)).toBe(true)
-    } else {
-      expect(typeof structuredData.error).toBe('string')
-    }
+    expect(structuredData.ok).toBe(true)
+    expect(structuredData.data).toBeDefined()
+    expect(structuredData.data?.length).toBeGreaterThan(10)
   })
 
   test('should get transfers for a valid tokenAddress (B3TR)', async () => {
@@ -49,15 +47,13 @@ describe('Indexer Get Transfers Of Account', () => {
       },
     })
     expect(response.content).toBeDefined()
+    expect(response.structuredContent).toBeDefined()
     const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
     const structuredData = structured.structuredContent
     expect(structuredData.network).toBeDefined()
-    expect(typeof structuredData.ok).toBe('boolean')
-    if (structuredData.ok) {
-      expect(Array.isArray(structuredData.data)).toBe(true)
-    } else {
-      expect(typeof structuredData.error).toBe('string')
-    }
+    expect(structuredData.ok).toBe(true)
+    expect(structuredData.data).toBeDefined()
+    expect(structuredData.data?.length).toBeGreaterThan(10)
   })
 
   test('should fail when neither address nor tokenAddress is provided', async () => {
@@ -65,11 +61,12 @@ describe('Indexer Get Transfers Of Account', () => {
       name: 'getTransfersOfAccount',
       arguments: {},
     })
+
     expect(response.content).toBeDefined()
+    expect(response.structuredContent).toBeDefined()
     const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
     const structuredData = structured.structuredContent
     expect(structuredData.ok).toBe(false)
+    expect(structuredData.error).toContain('Failed to fetch transfers from VeWorld Indexer')
   })
 })
-
-

@@ -3,10 +3,9 @@ import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetTransfersParamsBaseSchema,
-  IndexerGetTransfersParamsSchema,
+  type IndexerGetTransfersParamsSchema,
   IndexerTransferSchema,
 } from '@/services/veworld-indexer/schemas'
-
 import {
   createIndexerStructuredOutputSchema,
   createIndexerToolResponseSchema,
@@ -18,7 +17,7 @@ import { logger } from '@/utils/logger'
 /**
  * Schemas for get transfers of account tool outputs
  */
-export const IndexerGetTransfersOfOutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerTransferSchema))
+const IndexerGetTransfersOfOutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerTransferSchema))
 export const IndexerGetTransfersOfResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
 export type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOfResponseSchema>
 
@@ -66,12 +65,19 @@ export const getTransfersOfAccount: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(
-        `Error getting Transfers of ${params.address ?? params.tokenAddress} from VeWorld Indexer: ${String(error)}`,
-      )
-      return indexerErrorResponse(
-        `Error getting transfers of ${params.address ?? params.tokenAddress} from VeWorld Indexer: ${String(error)}`,
-      )
+      if (error instanceof z.ZodError) {
+        const messages = error.issues?.map(issue => issue.message).filter(Boolean)
+        const validationMessage = messages?.length
+          ? messages.join('; ')
+          : 'Invalid parameters for getTransfersOfAccount.'
+
+        logger.warn(`Validation error in getTransfersOfAccount: ${validationMessage}`)
+        return indexerErrorResponse(validationMessage)
+      }
+
+      const identifier = params.address ?? params.tokenAddress ?? 'address or tokenAddress'
+      logger.warn(`Error getting Transfers of ${identifier} from VeWorld Indexer: ${String(error)}`)
+      return indexerErrorResponse(`Error getting transfers of ${identifier} from VeWorld Indexer.`)
     }
   },
 }

@@ -4,7 +4,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 describe('Thor Get Block', () => {
   let client: Client
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     client = new Client({
       name: 'thor-get-block-client',
       version: '1.0.0',
@@ -13,7 +13,7 @@ describe('Thor Get Block', () => {
     await client.connect(transport)
   })
 
-  afterEach(async () => {
+  afterAll(async () => {
     await client.close()
   })
 
