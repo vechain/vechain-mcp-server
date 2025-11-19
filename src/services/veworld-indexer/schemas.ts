@@ -17,15 +17,19 @@ const paginationParamsSchema = z.object({
 
 // ***************************** Transfer schemas *****************************/
 
-export const IndexerGetTransfersParamsSchema = z
+export const IndexerGetTransfersParamsBaseSchema = z
   .object({
     address: ThorAddressSchema.optional(),
     tokenAddress: ThorAddressSchema.optional(),
   })
   .extend(paginationParamsSchema.shape)
-  .refine(data => data.address || data.tokenAddress, {
+
+export const IndexerGetTransfersParamsSchema = IndexerGetTransfersParamsBaseSchema.refine(
+  data => data.address || data.tokenAddress,
+  {
     message: "At least one of 'address' or 'tokenAddress' must be provided.",
-  })
+  },
+)
 
 export const IndexerTransferSchema = z.object({
   id: z.string(),

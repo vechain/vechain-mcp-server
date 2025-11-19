@@ -1,8 +1,11 @@
 import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
-import { IndexerGetTransfersParamsSchema, IndexerTransferSchema } from '@/services/veworld-indexer/schemas'
-
+import {
+  IndexerGetTransfersParamsBaseSchema,
+  IndexerGetTransfersParamsSchema,
+  IndexerTransferSchema,
+} from '@/services/veworld-indexer/schemas'
 import {
   createIndexerStructuredOutputSchema,
   createIndexerToolResponseSchema,
@@ -15,8 +18,8 @@ import { logger } from '@/utils/logger'
  * Schemas for get transfers of account tool outputs
  */
 const IndexerGetTransfersOfOutputSchema = createIndexerStructuredOutputSchema(z.array(IndexerTransferSchema))
-const IndexerGetTransfersOfResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
-type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOfResponseSchema>
+export const IndexerGetTransfersOfResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
+export type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOfResponseSchema>
 
 /**
  * Tool for getting transfer events of a given account
@@ -25,7 +28,7 @@ export const getTransfersOfAccount: MCPTool = {
   name: 'getTransfersOfAccount',
   title: 'Get Transfer events of account',
   description: 'Get the Transfer events of a given address or token address',
-  inputSchema: IndexerGetTransfersParamsSchema.shape,
+  inputSchema: IndexerGetTransfersParamsBaseSchema.shape,
   outputSchema: IndexerGetTransfersOfOutputSchema.shape,
   annotations: {
     idempotentHint: false,
@@ -37,7 +40,7 @@ export const getTransfersOfAccount: MCPTool = {
     try {
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
-        params,
+        params: IndexerGetTransfersParamsSchema.parse(params),
       })
 
       if (!response?.data) {
@@ -55,12 +58,19 @@ export const getTransfersOfAccount: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(
-        `Error getting Transfers of ${params.address ?? params.tokenAddress} from VeWorld Indexer: ${String(error)}`,
-      )
-      return indexerErrorResponse(
-        `Error getting transfers of ${params.address ?? params.tokenAddress} from VeWorld Indexer: ${String(error)}`,
-      )
+      if (error instanceof z.ZodError) {
+        const messages = error.issues?.map(issue => issue.message).filter(Boolean)
+        const validationMessage = messages?.length
+          ? messages.join('; ')
+          : 'Invalid parameters for getTransfersOfAccount.'
+
+        logger.warn(`Validation error in getTransfersOfAccount: ${validationMessage}`)
+        return indexerErrorResponse(validationMessage)
+      }
+
+      const identifier = params.address ?? params.tokenAddress ?? 'address or tokenAddress'
+      logger.warn(`Error getting Transfers of ${identifier} from VeWorld Indexer: ${String(error)}`)
+      return indexerErrorResponse(`Error getting transfers of ${identifier} from VeWorld Indexer.`)
     }
   },
 }
