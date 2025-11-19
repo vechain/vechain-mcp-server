@@ -36,3 +36,4 @@ export { getStargateTotalVthoGeneratedHistoric } from './get-stargate-total-vtho
 export { getStargateTotalVthoClaimedHistoric } from './get-stargate-total-vtho-claimed-historic'
 export { getStargateTotalVetStakedHistoric } from './get-stargate-total-vet-staked-historic'
 export { getVevoteHistoricProposals } from './get-vevote-historic-proposals'
+export { getVevoteProposalResults } from './get-vevote-proposal-results'

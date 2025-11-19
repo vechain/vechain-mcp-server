@@ -492,3 +492,34 @@ export const VevoteHistoricProposalsParamsSchema = z
 export const VevoteHistoricProposalsResponseSchema = indexerResponseSchema(
   VevoteHistoricProposalSchema,
 ).describe('List response for legacy VeVote historic proposals')
+
+// ***************************** VeVote proposal results (current governance) *****************************/
+export const VevoteSupportEnumSchema = z.enum(['AGAINST', 'FOR', 'ABSTAIN'])
+
+export const VevoteProposalResultSchema = z
+  .object({
+    blockNumber: ThorBlockNumberSchema,
+    blockTimestamp: z.number(),
+    proposalId: z.string(),
+    support: VevoteSupportEnumSchema,
+    totalWeight: z.number(),
+    totalVoters: z.number(),
+  })
+  .describe('Aggregate voting result per support for a proposal or overall support')
+
+export const VevoteProposalResultsParamsBaseSchema = z
+  .object({
+    proposalId: z.string().optional().describe('Proposal ID to filter by'),
+    support: VevoteSupportEnumSchema.optional().describe('Filter by support'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe('Base params for /api/v1/vevote/proposal/results')
+
+export const VevoteProposalResultsParamsSchema = VevoteProposalResultsParamsBaseSchema.refine(
+  v => !!v.proposalId || !!v.support,
+  { message: "At least one of 'proposalId' or 'support' must be provided." },
+).describe('Validated params for /api/v1/vevote/proposal/results')
+
+export const VevoteProposalResultsResponseSchema = indexerResponseSchema(
+  VevoteProposalResultSchema,
+).describe('List response for VeVote proposal results')
