@@ -4,17 +4,15 @@ import {
   ThorAddressSchema,
   ThorBlockIdSchema,
   ThorBlockNumberSchema,
-  ThorNetworkType,
   ThorTransactionIdSchema,
 } from '../thor'
-import { createIndexerToolResponseSchema } from './utils'
 
 // ***************************** Indexer API params schemas *****************************/
 
 const paginationParamsSchema = z.object({
-  page: z.number().nullable().optional().describe('Optional page number (1-based)'),
-  size: z.number().nullable().optional().describe('Optional page size'),
-  direction: z.enum(['ASC', 'DESC']).nullable().optional().describe('Optional sort direction (ASC or DESC)'),
+  page: z.number().optional().describe('Optional page number (1-based)'),
+  size: z.number().optional().describe('Optional page size'),
+  direction: z.enum(['ASC', 'DESC']).optional().describe('Optional sort direction (ASC or DESC)'),
 })
 
 // ***************************** Transfer schemas *****************************/
@@ -53,7 +51,6 @@ export const IndexerTransferSchema = z.object({
 // basic types
 const UnixTimestamp = z.number().int().nonnegative()
 const NumericString = z.string().regex(/^\d+$/)
-const HexString = z.string().regex(/^0x[a-fA-F0-9]+$/)
 
 // history event names
 const HistoryEventNameSchema = z.enum([
@@ -146,7 +143,7 @@ const SustainabilityProofV2Schema = z.object({
 
 // schema for a VBD app vote
 const AppVoteSchema = z.object({
-  appId: HexString,
+  appId: HexStringSchema,
   voteWeight: NumericString,
 })
 
@@ -169,7 +166,7 @@ export const IndexedHistoryEventSchema = z.object({
   to: ThorAddressSchema.optional().describe('The to address of the history event'),
   from: ThorAddressSchema.optional().describe('The from address of the history event'),
   value: NumericString.optional().describe('The value of the history event in wei'),
-  appId: HexString.optional().describe('The VeBetterDAO app id of the history event'),
+  appId: HexStringSchema.optional().describe('The VeBetterDAO app id of the history event'),
   proof: SustainabilityProofV2Schema.optional().describe('The proof of the sustainability action of the history event'),
   roundId: NumericString.optional().describe('The VeBetterDAO round id of the history event'),
   appVotes: z.array(AppVoteSchema).optional().describe('The VeBetterDAO app votes of the history event'),
@@ -192,41 +189,8 @@ export const IndexedHistoryEventSchema = z.object({
   migrated: z.boolean().optional(),
   autorenew: z.boolean().optional(),
   tokenIds: z.array(z.string()).optional(),
-  validator: HexString.optional(),
+  validator: HexStringSchema.optional(),
   delegationId: z.string().optional(),
   periodClaimed: z.number().int().optional(),
   boostedBlocks: z.string().optional(),
 })
-
-/**
- * Schema for the structuredContent response of the get history of account tool
- */
-export const IndexerGetHistoryOfAccountStructuredSchema = z.object({
-  ok: z.boolean(),
-  network: z.nativeEnum(ThorNetworkType),
-  data: z.array(IndexedHistoryEventSchema).nullable(),
-  error: z.string().optional(),
-})
-
-// TODO: This schema is not working as expected in tests, need to investigate why
-//export const IndexerGetHistoryOfAccountStructuredSchema = createIndexerStructuredOutputSchema(
-//  z.array(IndexedHistoryEventSchema),
-//)
-
-/**
- * Type for the structuredContent response of the get history of account tool
- */
-export type IndexerGetHistoryOfAccountStructuredResponseType = z.infer<
-  typeof IndexerGetHistoryOfAccountStructuredSchema
->
-
-/**
- * Schema for the response of the get history of account tool
- */
-export const IndexerGetHistoryOfAccountResponseSchema = createIndexerToolResponseSchema(
-  z.array(IndexedHistoryEventSchema),
-)
-/**
- * Type for the response of the get history of account tool
- */
-export type IndexerGetHistoryOfAccountResponseType = z.infer<typeof IndexerGetHistoryOfAccountResponseSchema>
