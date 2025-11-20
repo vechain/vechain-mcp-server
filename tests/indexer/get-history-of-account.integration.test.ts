@@ -68,7 +68,7 @@ describe('Indexer Get History of Account', () => {
     expect(outputFirstItem).toHaveProperty('appVotes')
     expect(outputFirstItem.appVotes).toBeInstanceOf(Array)
 
-    for (const appVote of outputFirstItem.appVotes!) {
+    for (const appVote of outputFirstItem.appVotes ?? []) {
       expect(appVote).toBeInstanceOf(Object)
       expect(appVote).toHaveProperty('appId')
       expect(appVote).toHaveProperty('voteWeight')

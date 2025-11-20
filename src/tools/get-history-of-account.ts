@@ -51,14 +51,10 @@ export const getHistoryOfAccount: MCPTool = {
   },
   handler: async (params: z.infer<typeof GetHistoryInputSchema>): Promise<IndexerGetHistoryOfAccountResponse> => {
     try {
-      const parsed = GetHistoryInputSchema.parse(params)
-      const { address, ...queryParams } = parsed
-
-      const resolvedAddress = await resolveVnsOrAddress(address)
-      const resolvedAddressHex = resolvedAddress as `0x${string}`
+      const { address, ...queryParams } = GetHistoryInputSchema.parse(params)
 
       const validatedParams = IndexerGetHistoryParamsSchema.parse({
-        address: resolvedAddressHex,
+        address: await resolveVnsOrAddress(address),
         ...queryParams,
       })
 

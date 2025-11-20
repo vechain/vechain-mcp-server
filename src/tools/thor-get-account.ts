@@ -49,15 +49,13 @@ export const getAccount: MCPTool = {
   },
   handler: async ({ address }: z.infer<typeof ThorGetAccountInputSchema>): Promise<ThorGetAccountResponse> => {
     try {
-      const inputAddress = String(address)
-      const resolvedAddress = await resolveVnsOrAddress(inputAddress)
-      const resolvedAddressHex = resolvedAddress as `0x${string}`
+      const resolvedAddress = await resolveVnsOrAddress(address)
 
-      logger.debug(`Getting account ${inputAddress} (resolved: ${resolvedAddressHex}) from Thor network`)
+      logger.debug(`Getting account ${address} (resolved: ${resolvedAddress}) from Thor network`)
       const thorClient = getThorClient()
-      const account = await thorClient.accounts.getAccount(Address.of(resolvedAddressHex))
+      const account = await thorClient.accounts.getAccount(Address.of(resolvedAddress))
       if (account === null) {
-        logger.warn(`Account ${resolvedAddressHex} (input: ${address}) not found on Thor network`)
+        logger.warn(`Account ${resolvedAddress} (input: ${address}) not found on Thor network`)
         return thorErrorResponse('Account not found')
       }
 
@@ -65,7 +63,7 @@ export const getAccount: MCPTool = {
       const VTHO = HexStringSchema.parse(account.energy)
 
       const data = {
-        address: resolvedAddressHex,
+        address: resolvedAddress,
         VET: formatUnits(hexToBigInt(VET), 18),
         VTHO: formatUnits(hexToBigInt(VTHO), 18),
         type: account.hasCode === true ? 'contract' : 'wallet',

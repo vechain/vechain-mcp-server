@@ -53,17 +53,23 @@ export const getTransfersOfAccount: MCPTool = {
     params: z.infer<typeof IndexerGetTransfersVnsParamsSchema>,
   ): Promise<IndexerGetTransfersOfResponse> => {
     try {
-      const parsed = IndexerGetTransfersVnsParamsSchema.parse(params)
+      const { address, tokenAddress, ...rest } = IndexerGetTransfersVnsParamsSchema.parse(params)
 
-      const { address, tokenAddress, ...rest } = parsed
+      let resolvedAddress: `0x${string}` | undefined
+      let resolvedTokenAddress: `0x${string}` | undefined
 
-      const resolvedAddress = address !== undefined ? await resolveVnsOrAddress(address) : undefined
-      const resolvedTokenAddress = tokenAddress !== undefined ? await resolveVnsOrAddress(tokenAddress) : undefined
+      if (address) {
+        resolvedAddress = await resolveVnsOrAddress(address)
+      }
+
+      if (tokenAddress) {
+        resolvedTokenAddress = await resolveVnsOrAddress(tokenAddress)
+      }
 
       const indexerParams = {
         ...rest,
-        ...(resolvedAddress ? { address: resolvedAddress as `0x${string}` } : {}),
-        ...(resolvedTokenAddress ? { tokenAddress: resolvedTokenAddress as `0x${string}` } : {}),
+        ...(resolvedAddress && { address: resolvedAddress }),
+        ...(resolvedTokenAddress && { tokenAddress: resolvedTokenAddress }),
       }
 
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
