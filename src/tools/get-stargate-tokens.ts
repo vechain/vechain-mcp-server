@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
-import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
+import { veworldIndexerGet } from '@/services/veworld-indexer'
 import { createIndexerStructuredOutputSchema, createIndexerToolResponseSchema, indexerErrorResponse } from '@/services/veworld-indexer/utils'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
@@ -32,14 +32,14 @@ export const getStargateTokens: MCPTool = {
   ): Promise<IndexerStargateTokensResponse> => {
     try {
       const validated = IndexerGetStargateTokensParamsSchema.parse(params ?? {})
-      const data = await veworldIndexerGetSingle<unknown[]>({
+      const response = await veworldIndexerGet<typeof IndexerStargateTokenSchema>({
         endPoint: '/api/v1/stargate/tokens',
-        params: validated,
+        params: validated as any,
       })
-      if (!data) {
+      if (!response?.data) {
         return indexerErrorResponse('Failed to fetch Stargate tokens from VeWorld Indexer')
       }
-      const tokens = z.array(IndexerStargateTokenSchema).parse(data)
+      const tokens = z.array(IndexerStargateTokenSchema).parse(response.data)
       return {
         content: [{ type: 'text', text: JSON.stringify(tokens) }],
         structuredContent: {

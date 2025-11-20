@@ -27,7 +27,32 @@ export const getValidators: MCPTool = {
   name: 'getValidators',
   title: 'Indexer: Validators (v1)',
   description:
-    'Retrieve validator statistics via /api/v1/validators. Filters: validatorId, endorser, status. Sort with sortBy (validatorTvl, totalTvl, blockProbability, delegatorTvl, or nft:<Level> Yield for next cycle). Supports pagination (page, size) and direction.',
+    `Retrieve validator statistics via /api/v1/validators for Stargate NFT delegation decisions.
+
+KEY METRICS:
+- nftYieldsNextCycle: Projected APY (%) for each Stargate NFT level in the next cycle
+- blockProbability: Validator's chance of producing blocks (higher = more rewards)
+- percentageOffline: Validator uptime reliability (lower = better)
+- delegatorTvl: Total USD value delegated by Stargate NFTs (higher = more competition)
+
+FILTERS:
+- validatorId: Filter by specific validator address
+- endorser: Filter by endorser address  
+- status: NONE, QUEUED, ACTIVE, EXITED, EXITING
+
+SORTING (sortBy parameter):
+- For NFT delegation: Use 'nft:<Level>' (e.g., 'nft:Dawn', 'nft:Thunder') to sort by APY
+  IMPORTANT: When sorting by NFT yield, filter by status=ACTIVE or include QUEUED validators
+- Other options: validatorTvl, totalTvl, blockProbability, delegatorTvl
+
+PAGINATION: Supports page, size, cursor, and direction (ASC/DESC)
+
+VALIDATOR RECOMMENDATION GUIDELINES:
+1. Primary metric: nftYieldsNextCycle[level] - this is APY percentage, NOT absolute VTHO
+2. Sort by the user's NFT level (e.g., sortBy='nft:Dawn' for Dawn NFTs)
+3. Filter to status=ACTIVE for currently operating validators
+4. Consider percentageOffline as secondary factor (reject if >30%)
+5. Present top 3-5 options with APY clearly labeled as percentage`,
   inputSchema: IndexerGetValidatorsParamsSchema.shape,
   outputSchema: IndexerGetValidatorsOutputSchema.shape,
   annotations: {

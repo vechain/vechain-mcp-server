@@ -20,9 +20,9 @@ export type IndexerStargateNftHoldersTotalResponse = z.infer<
 
 export const getStargateNftHoldersTotal: MCPTool = {
   name: 'getStargateNftHoldersTotal',
-  title: 'Indexer: Stargate NFT held by users (total)',
+  title: 'Indexer: Total stargate NFT (total)',
   description:
-    'Get the total number of Stargate NFTs held by users via /api/v1/stargate/nft-holders. Returns a numeric value encoded as a JSON string.',
+    'Get the total number of Stargate NFTs and breakdown by level via /api/v1/stargate/nft-holders. Returns an object with block metadata, total, and byLevel.',
   inputSchema: {},
   outputSchema: IndexerStargateNftHoldersTotalOutputSchema.shape,
   annotations: {
@@ -33,16 +33,18 @@ export const getStargateNftHoldersTotal: MCPTool = {
   },
   handler: async (): Promise<IndexerStargateNftHoldersTotalResponse> => {
     try {
-      const data = await veworldIndexerGetSingle<string>({
+      const data = await veworldIndexerGetSingle<unknown>({
         endPoint: '/api/v1/stargate/nft-holders',
       })
       if (data == null) {
         return indexerErrorResponse('Failed to fetch total NFT holders from VeWorld Indexer')
       }
-      IndexerStargateNftHoldersTotalSchema.parse(data)
+      const parsed = IndexerStargateNftHoldersTotalSchema.parse(
+        (data && typeof data === 'object' && 'data' in (data as any)) ? (data as any).data : data,
+      )
       return {
-        content: [{ type: 'text', text: data }],
-        structuredContent: { ok: true, network: getThorNetworkType(), data },
+        content: [{ type: 'text', text: JSON.stringify(parsed) }],
+        structuredContent: { ok: true, network: getThorNetworkType(), data: parsed },
       }
     } catch (error) {
       logger.warn(`Error fetching Stargate NFT holders total: ${String(error)}`)

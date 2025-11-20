@@ -36,7 +36,7 @@ const THOR_NETWORK_CONFIGS: Record<ThorNetworkType, ThorNetworkConfig> = {
   },
 }
 
-const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
+const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.TESTNET
 
 let _thorClient: ThorClient | null = null
 let _thorNetworkConfig: ThorNetworkConfig | null = null

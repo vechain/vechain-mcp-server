@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
-import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
+import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetStargateMetricsByPeriodParamsSchema,
   IndexerStargateMetricsByPeriodSchema,
@@ -51,13 +51,15 @@ export function createMetricsByPeriodTool(config: {
       try {
         const { period } = IndexerGetStargateMetricsByPeriodParamsSchema.parse(params)
         const endpoint = `${pathPrefix}/${period}`
-        const data = await veworldIndexerGetSingle<unknown[]>({
+        const response = await veworldIndexerGet<typeof IndexerStargateMetricsByPeriodSchema>({
           endPoint: endpoint,
         })
-        if (!data) {
+        if (!response) {
           return indexerErrorResponse(`Failed to fetch ${endpoint} from VeWorld Indexer`)
         }
-        IndexerStargateMetricsByPeriodSchema.parse(data)
+        const data = Array.isArray(response.data) ? response.data : []
+        // Validate array shape (may be heterogeneous per endpoint)
+        IndexerStargateMetricsByPeriodSchema.parse(data as any)
         return {
           content: [{ type: 'text', text: JSON.stringify(data) }],
           structuredContent: {

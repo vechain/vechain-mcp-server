@@ -28,21 +28,21 @@ export const getVevoteProposalResults: MCPTool = {
   name: 'getVevoteProposalResults',
   title: 'VeVote: proposal results (current governance)',
   description:
-    'Fetch aggregated voting results per support from /api/v1/vevote/proposal/results. Provide at least one of proposalId or support; supports pagination.',
+    'Fetch aggregated voting results per support from /api/v1/vevote/proposal/results. Optional filters: proposalId, support; supports pagination.',
   inputSchema: VevoteProposalResultsParamsBaseSchema.shape,
   outputSchema: VevoteProposalResultsOutputSchema.shape,
   annotations: { idempotentHint: true, openWorldHint: true, readOnlyHint: true, destructiveHint: false },
   handler: async (
-    params: z.infer<typeof VevoteProposalResultsParamsSchema>,
+    params: z.infer<typeof VevoteProposalResultsParamsBaseSchema>,
   ): Promise<VevoteProposalResultsToolResponse> => {
     try {
-      VevoteProposalResultsParamsSchema.parse(params)
+      const parsed = VevoteProposalResultsParamsBaseSchema.parse(params ?? {})
       const response = await veworldIndexerGet<
         typeof VevoteProposalResultSchema,
-        typeof VevoteProposalResultsParamsSchema
+        typeof VevoteProposalResultsParamsBaseSchema
       >({
         endPoint: '/api/v1/vevote/proposal/results',
-        params: params as any,
+        params: parsed as any,
       })
       if (!response?.data) return indexerErrorResponse('Failed to fetch VeVote proposal results')
       return {
