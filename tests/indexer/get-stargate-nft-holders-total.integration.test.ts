@@ -28,11 +28,12 @@ describe('Indexer Stargate NFT Holders Total', () => {
     const structured = parsed.structuredContent
     expect(structured.network).toBeDefined()
     expect(typeof structured.ok).toBe('boolean')
-    if (structured.ok) {
-      expect(typeof structured.data).toBe('string')
-    } else {
-      expect(typeof structured.error).toBe('string')
-    }
+      expect(typeof structured.data).toBe('object')
+      expect(structured.data).toHaveProperty('total')
+      expect(typeof (structured.data as any).total).toBe('number')
+      expect(structured.data).toHaveProperty('byLevel')
+      expect(typeof (structured.data as any).byLevel).toBe('object')
+
   }, 30000)
 })
 
