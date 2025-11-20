@@ -42,20 +42,19 @@ export const getTransfersOfAccount: MCPTool = {
       const { address, tokenAddress, ...rest } = params
 
       let resolvedAddress: `0x${string}` | undefined
-
       if (address) {
         resolvedAddress = await resolveVnsOrAddress(address)
       }
 
-      const indexerParams = {
+      const validatedParams = IndexerGetTransfersParamsSchema.parse({
+        address: resolvedAddress,
+        tokenAddress,
         ...rest,
-        ...(resolvedAddress && { address: resolvedAddress }),
-        ...(tokenAddress && { tokenAddress }),
-      }
+      })
 
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
-        params: indexerParams,
+        params: validatedParams,
       })
 
       if (!response?.data) {
