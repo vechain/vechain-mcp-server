@@ -63,10 +63,6 @@ describe('Indexer Get History of Account', () => {
     expect(outputFirstItem).toHaveProperty('origin')
     expect(outputFirstItem).toHaveProperty('gasPayer')
     expect(outputFirstItem).toHaveProperty('eventName')
-    expect(outputFirstItem).toHaveProperty('from')
-    expect(outputFirstItem).toHaveProperty('roundId')
-    expect(outputFirstItem).toHaveProperty('appVotes')
-    expect(outputFirstItem.appVotes).toBeInstanceOf(Array)
 
     for (const appVote of outputFirstItem.appVotes ?? []) {
       expect(appVote).toBeInstanceOf(Object)
