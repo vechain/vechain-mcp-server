@@ -79,7 +79,7 @@ describe('Indexer Get History of Account', () => {
     const response = await client.callTool({
       name: 'getHistoryOfAccount',
       arguments: {
-        address: 'mrojofer.vet',
+        address: 'test.vet',
       },
     })
 

@@ -42,7 +42,7 @@ describe('Indexer Get Transfers Of Account', () => {
     const response = await client.callTool({
       name: 'getTransfersOfAccount',
       arguments: {
-        address: 'mrojofer.vet',
+        address: 'test.vet',
       },
     })
     expect(response.content).toBeDefined()
@@ -54,7 +54,7 @@ describe('Indexer Get Transfers Of Account', () => {
     expect(structuredData.network).toBeDefined()
     expect(structuredData.ok).toBe(true)
     expect(structuredData.data).toBeDefined()
-    // Puede ser 0 si aún no hay transfers, solo validamos que sea un array
+    // It may be empty if there are no transfers yet; we only validate it is an array
     expect(Array.isArray(structuredData.data)).toBe(true)
   })
 
@@ -87,6 +87,6 @@ describe('Indexer Get Transfers Of Account', () => {
     const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
     const structuredData = structured.structuredContent
     expect(structuredData.ok).toBe(false)
-    expect(structuredData.error).toContain('Failed to fetch transfers from VeWorld Indexer')
+    expect(structuredData.error).toContain("At least one of 'address' or 'tokenAddress' must be provided.")
   })
 })

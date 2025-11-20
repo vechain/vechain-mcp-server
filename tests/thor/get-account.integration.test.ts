@@ -38,7 +38,7 @@ describe('Thor Get Account', () => {
     const response = await client.callTool({
       name: 'thorGetAccount',
       arguments: {
-        address: 'mrojofer.vet',
+        address: 'test.vet',
       },
     })
 
@@ -48,9 +48,7 @@ describe('Thor Get Account', () => {
 
     expect(structuredContent.ok).toBe(true)
     expect(structuredContent.data).toBeDefined()
-    // La dirección devuelta debe ser una dirección Thor 0x...
+    // The returned address must be a Thor 0x... address
     expect(structuredContent.data.address).toMatch(/^0x[a-fA-F0-9]{40}$/)
   })
-}
-
-
+})
