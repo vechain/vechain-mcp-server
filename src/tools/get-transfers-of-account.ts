@@ -3,7 +3,7 @@ import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetTransfersParamsBaseSchema,
-  type IndexerGetTransfersParamsSchema,
+  IndexerGetTransfersParamsSchema,
   IndexerTransferSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -11,6 +11,7 @@ import {
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
+import { resolveVnsOrAddress } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -38,9 +39,22 @@ export const getTransfersOfAccount: MCPTool = {
   },
   handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
     try {
+      const { address, tokenAddress, ...rest } = params
+
+      let resolvedAddress: `0x${string}` | undefined
+      if (address) {
+        resolvedAddress = await resolveVnsOrAddress(address)
+      }
+
+      const validatedParams = IndexerGetTransfersParamsSchema.parse({
+        address: resolvedAddress,
+        tokenAddress,
+        ...rest,
+      })
+
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
-        params,
+        params: validatedParams,
       })
 
       if (!response?.data) {

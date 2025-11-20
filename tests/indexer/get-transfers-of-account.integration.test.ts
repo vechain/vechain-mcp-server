@@ -38,6 +38,26 @@ describe('Indexer Get Transfers Of Account', () => {
     expect(structuredData.data?.length).toBeGreaterThan(10)
   })
 
+  test('should get transfers for a valid VNS name', async () => {
+    const response = await client.callTool({
+      name: 'getTransfersOfAccount',
+      arguments: {
+        address: 'test.vet',
+      },
+    })
+    expect(response.content).toBeDefined()
+    expect(response.structuredContent).toBeDefined()
+
+    const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
+    const structuredData = structured.structuredContent
+
+    expect(structuredData.network).toBeDefined()
+    expect(structuredData.ok).toBe(true)
+    expect(structuredData.data).toBeDefined()
+    // It may be empty if there are no transfers yet; we only validate it is an array
+    expect(Array.isArray(structuredData.data)).toBe(true)
+  })
+
   test('should get transfers for a valid tokenAddress (B3TR)', async () => {
     const B3TR_TOKEN_ADDRESS = '0x5ef79995FE8a89e0812330E4378eB2660ceDe699'
     const response = await client.callTool({
@@ -67,6 +87,6 @@ describe('Indexer Get Transfers Of Account', () => {
     const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
     const structuredData = structured.structuredContent
     expect(structuredData.ok).toBe(false)
-    expect(structuredData.error).toContain('Failed to fetch transfers from VeWorld Indexer')
+    expect(structuredData.error).toContain("At least one of 'address' or 'tokenAddress' must be provided.")
   })
 })

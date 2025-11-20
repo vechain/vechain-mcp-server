@@ -6,6 +6,7 @@ import {
   ThorBlockNumberSchema,
   ThorTransactionIdSchema,
 } from '../thor'
+import { VnsNameSchema } from '../vns'
 
 // ***************************** Indexer API params schemas *****************************/
 
@@ -19,7 +20,7 @@ const paginationParamsSchema = z.object({
 
 export const IndexerGetTransfersParamsBaseSchema = z
   .object({
-    address: ThorAddressSchema.optional(),
+    address: z.union([ThorAddressSchema, VnsNameSchema]).optional(),
     tokenAddress: ThorAddressSchema.optional(),
   })
   .extend(paginationParamsSchema.shape)
@@ -95,7 +96,7 @@ const HistoryEventSearchBySchema = z.enum(['to', 'from', 'origin', 'gasPayer'])
 // indexer get history params schema
 export const IndexerGetHistoryParamsSchema = z
   .object({
-    address: ThorAddressSchema.describe('The account address to retrieve'),
+    address: z.union([ThorAddressSchema, VnsNameSchema]).describe('The account address or VNS (.vet) name to retrieve'),
     eventName: HistoryEventNameSchema.nullable().optional().describe('Optional filter by event name'),
     searchBy: HistoryEventSearchBySchema.nullable()
       .optional()
