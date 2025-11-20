@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { ThorGetAccountResponseSchema } from '@/tools/thor-get-account'
 
 describe('Thor Get Account', () => {
   let client: Client
@@ -27,11 +28,11 @@ describe('Thor Get Account', () => {
 
     expect(response.content).toBeDefined()
     expect(response.structuredContent).toBeDefined()
-    const { structuredContent } = response as any
+    const { structuredContent } = ThorGetAccountResponseSchema.parse(response)
 
     expect(structuredContent.ok).toBe(true)
     expect(structuredContent.data).toBeDefined()
-    expect(structuredContent.data.address).toBe('0x311E811cd3fC29Ba17D45B04c882245FA69DC776')
+    expect(structuredContent.data?.address).toBe('0x311E811cd3fC29Ba17D45B04c882245FA69DC776')
   })
 
   test('should get an account by VNS name', async () => {
@@ -44,11 +45,11 @@ describe('Thor Get Account', () => {
 
     expect(response.content).toBeDefined()
     expect(response.structuredContent).toBeDefined()
-    const { structuredContent } = response as any
+    const { structuredContent } = ThorGetAccountResponseSchema.parse(response)
 
     expect(structuredContent.ok).toBe(true)
     expect(structuredContent.data).toBeDefined()
     // The returned address must be a Thor 0x... address
-    expect(structuredContent.data.address).toMatch(/^0x[a-fA-F0-9]{40}$/)
+    expect(structuredContent.data?.address).toMatch(/^0x[a-fA-F0-9]{40}$/)
   })
 })

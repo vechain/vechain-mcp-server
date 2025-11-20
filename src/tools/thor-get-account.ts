@@ -25,7 +25,7 @@ const ThorAccountDataSchema = z.object({
 })
 
 const ThorGetAccountOutputSchema = createThorStructuredOutputSchema(ThorAccountDataSchema)
-const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema)
+export const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema)
 type ThorGetAccountResponse = z.infer<typeof ThorGetAccountResponseSchema>
 
 const ThorGetAccountInputSchema = z.object({
