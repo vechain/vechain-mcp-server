@@ -38,6 +38,26 @@ describe('Indexer Get Transfers Of Account', () => {
     expect(structuredData.data?.length).toBeGreaterThan(10)
   })
 
+  test('should get transfers for a valid VNS name', async () => {
+    const response = await client.callTool({
+      name: 'getTransfersOfAccount',
+      arguments: {
+        address: 'mrojofer.vet',
+      },
+    })
+    expect(response.content).toBeDefined()
+    expect(response.structuredContent).toBeDefined()
+
+    const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
+    const structuredData = structured.structuredContent
+
+    expect(structuredData.network).toBeDefined()
+    expect(structuredData.ok).toBe(true)
+    expect(structuredData.data).toBeDefined()
+    // Puede ser 0 si aún no hay transfers, solo validamos que sea un array
+    expect(Array.isArray(structuredData.data)).toBe(true)
+  })
+
   test('should get transfers for a valid tokenAddress (B3TR)', async () => {
     const B3TR_TOKEN_ADDRESS = '0x5ef79995FE8a89e0812330E4378eB2660ceDe699'
     const response = await client.callTool({

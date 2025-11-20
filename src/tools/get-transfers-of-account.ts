@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getThorNetworkType } from '@/services/thor'
+import { getThorNetworkType, ThorAddressSchema } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetTransfersParamsBaseSchema,
@@ -11,6 +11,7 @@ import {
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
+import { resolveVnsOrAddress, VnsNameSchema } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -21,6 +22,18 @@ const IndexerGetTransfersOfOutputSchema = createIndexerStructuredOutputSchema(z.
 export const IndexerGetTransfersOfResponseSchema = createIndexerToolResponseSchema(z.array(IndexerTransferSchema))
 export type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOfResponseSchema>
 
+const IndexerGetTransfersVnsParamsBaseSchema = IndexerGetTransfersParamsBaseSchema.extend({
+  address: z.union([ThorAddressSchema, VnsNameSchema]).optional(),
+  tokenAddress: z.union([ThorAddressSchema, VnsNameSchema]).optional(),
+})
+
+const IndexerGetTransfersVnsParamsSchema = IndexerGetTransfersVnsParamsBaseSchema.refine(
+  data => data.address || data.tokenAddress,
+  {
+    message: "At least one of 'address' or 'tokenAddress' must be provided.",
+  },
+)
+
 /**
  * Tool for getting transfer events of a given account
  */
@@ -28,7 +41,7 @@ export const getTransfersOfAccount: MCPTool = {
   name: 'getTransfersOfAccount',
   title: 'Get Transfer events of account',
   description: 'Get the Transfer events of a given address or token address',
-  inputSchema: IndexerGetTransfersParamsBaseSchema.shape,
+  inputSchema: IndexerGetTransfersVnsParamsBaseSchema.shape,
   outputSchema: IndexerGetTransfersOfOutputSchema.shape,
   annotations: {
     idempotentHint: false,
@@ -36,11 +49,27 @@ export const getTransfersOfAccount: MCPTool = {
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
+  handler: async (
+    params: z.infer<typeof IndexerGetTransfersVnsParamsSchema>,
+  ): Promise<IndexerGetTransfersOfResponse> => {
     try {
+      const parsed = IndexerGetTransfersVnsParamsSchema.parse(params)
+
+      const { address, tokenAddress, ...rest } = parsed
+
+      const resolvedAddress = address !== undefined ? await resolveVnsOrAddress(String(address)) : undefined
+      const resolvedTokenAddress =
+        tokenAddress !== undefined ? await resolveVnsOrAddress(String(tokenAddress)) : undefined
+
+      const indexerParams = {
+        ...rest,
+        ...(resolvedAddress ? { address: resolvedAddress as `0x${string}` } : {}),
+        ...(resolvedTokenAddress ? { tokenAddress: resolvedTokenAddress as `0x${string}` } : {}),
+      }
+
       const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
-        params,
+        params: indexerParams,
       })
 
       if (!response?.data) {

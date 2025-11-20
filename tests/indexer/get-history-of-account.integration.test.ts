@@ -74,4 +74,19 @@ describe('Indexer Get History of Account', () => {
       expect(appVote).toHaveProperty('voteWeight')
     }
   })
+
+  test('should get history of account for a VNS name (may be empty history)', async () => {
+    const response = await client.callTool({
+      name: 'getHistoryOfAccount',
+      arguments: {
+        address: 'mrojofer.vet',
+      },
+    })
+
+    expect(() => IndexerGetHistoryOfAccountResponseSchema.parse(response)).not.toThrow()
+    const { structuredContent } = IndexerGetHistoryOfAccountResponseSchema.parse(response)
+
+    expect(structuredContent.ok).toBe(true)
+    expect(Array.isArray(structuredContent.data)).toBe(true)
+  })
 })
