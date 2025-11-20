@@ -7,7 +7,7 @@ import {
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
-
+import { resolveVnsOrAddress } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -121,12 +121,18 @@ export const getHistoryOfAccount: MCPTool = {
   ): Promise<IndexerGetHistoryOfAccountResponse> => {
     try {
       const { address, ...queryParams } = params
+
+      const { address: validatedAddress, ...validatedQuery } = IndexerGetHistoryParamsSchema.parse({
+        address: await resolveVnsOrAddress(address),
+        ...queryParams,
+      })
+
       const response = await veworldIndexerGet<
         typeof IndexedHistoryEventSchema,
         typeof IndexerGetHistoryQueryParamsSchema
       >({
-        endPoint: `/api/v2/history/${address}`,
-        params: queryParams,
+        endPoint: `/api/v2/history/${validatedAddress}`,
+        params: validatedQuery,
       })
 
       if (!response?.data) {

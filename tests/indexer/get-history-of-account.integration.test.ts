@@ -68,10 +68,25 @@ describe('Indexer Get History of Account', () => {
     expect(outputFirstItem).toHaveProperty('appVotes')
     expect(outputFirstItem.appVotes).toBeInstanceOf(Array)
 
-    for (const appVote of outputFirstItem.appVotes!) {
+    for (const appVote of outputFirstItem.appVotes ?? []) {
       expect(appVote).toBeInstanceOf(Object)
       expect(appVote).toHaveProperty('appId')
       expect(appVote).toHaveProperty('voteWeight')
     }
+  })
+
+  test('should get history of account for a VNS name (may be empty history)', async () => {
+    const response = await client.callTool({
+      name: 'getHistoryOfAccount',
+      arguments: {
+        address: 'test.vet',
+      },
+    })
+
+    expect(() => IndexerGetHistoryOfAccountResponseSchema.parse(response)).not.toThrow()
+    const { structuredContent } = IndexerGetHistoryOfAccountResponseSchema.parse(response)
+
+    expect(structuredContent.ok).toBe(true)
+    expect(Array.isArray(structuredContent.data)).toBe(true)
   })
 })

@@ -11,6 +11,7 @@ import {
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
+import { resolveVnsOrAddress } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -41,13 +42,22 @@ export const getTransfersOfAccount: MCPTool = {
     params: z.infer<typeof IndexerGetTransfersParamsBaseSchema>,
   ): Promise<IndexerGetTransfersOfResponse> => {
     try {
-      IndexerGetTransfersParamsSchema.parse(params)
-      const response = await veworldIndexerGet<
-        typeof IndexerTransferSchema,
-        typeof IndexerGetTransfersParamsBaseSchema
-      >({
+      const { address, tokenAddress, ...rest } = params
+
+      let resolvedAddress: `0x${string}` | undefined
+      if (address) {
+        resolvedAddress = await resolveVnsOrAddress(address)
+      }
+
+      const validatedParams = IndexerGetTransfersParamsSchema.parse({
+        address: resolvedAddress,
+        tokenAddress,
+        ...rest,
+      })
+
+      const response = await veworldIndexerGet<typeof IndexerTransferSchema, typeof IndexerGetTransfersParamsSchema>({
         endPoint: '/api/v1/transfers',
-        params,
+        params: validatedParams,
       })
 
       if (!response?.data) {

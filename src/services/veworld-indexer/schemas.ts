@@ -7,6 +7,7 @@ import {
   ThorBlockNumberSchema,
   ThorTransactionIdSchema,
 } from '../thor'
+import { VnsNameSchema } from '../vns'
 
 // ***************************** Indexer API params schemas *****************************/
 
@@ -71,7 +72,7 @@ const HistoryEventSearchBySchema = z.enum(['to', 'from', 'origin', 'gasPayer'])
 // indexer get history params schema
 export const IndexerGetHistoryParamsSchema = z
   .object({
-    address: ThorAddressSchema.describe('The account address to retrieve'),
+    address: z.union([ThorAddressSchema, VnsNameSchema]).describe('The account address or VNS (.vet) name to retrieve'),
     eventName: z.union([
       HistoryEventNameSchema,
       z.array(HistoryEventNameSchema)

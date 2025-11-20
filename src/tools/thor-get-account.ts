@@ -10,6 +10,7 @@ import {
   ThorAddressSchema,
   thorErrorResponse,
 } from '@/services/thor'
+import { resolveVnsOrAddress, VnsNameSchema } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -24,8 +25,12 @@ const ThorAccountDataSchema = z.object({
 })
 
 const ThorGetAccountOutputSchema = createThorStructuredOutputSchema(ThorAccountDataSchema)
-const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema)
+export const ThorGetAccountResponseSchema = createThorToolResponseSchema(ThorAccountDataSchema)
 type ThorGetAccountResponse = z.infer<typeof ThorGetAccountResponseSchema>
+
+const ThorGetAccountInputSchema = z.object({
+  address: z.union([ThorAddressSchema, VnsNameSchema]).describe('Thor address (0x...) or VNS (.vet) name'),
+})
 
 /**
  * Tool for getting account details from Thor network
@@ -34,7 +39,7 @@ export const getAccount: MCPTool = {
   name: 'thorGetAccount',
   title: 'Thor Get Account',
   description: 'Get account details from Thor network',
-  inputSchema: { address: ThorAddressSchema },
+  inputSchema: ThorGetAccountInputSchema.shape,
   outputSchema: ThorGetAccountOutputSchema.shape,
   annotations: {
     idempotentHint: false,
@@ -42,13 +47,15 @@ export const getAccount: MCPTool = {
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async ({ address }: { address: z.infer<typeof ThorAddressSchema> }): Promise<ThorGetAccountResponse> => {
+  handler: async ({ address }: z.infer<typeof ThorGetAccountInputSchema>): Promise<ThorGetAccountResponse> => {
     try {
-      logger.debug(`Getting account ${address} from Thor network`)
+      const resolvedAddress = await resolveVnsOrAddress(address)
+
+      logger.debug(`Getting account ${address} (resolved: ${resolvedAddress}) from Thor network`)
       const thorClient = getThorClient()
-      const account = await thorClient.accounts.getAccount(Address.of(address))
+      const account = await thorClient.accounts.getAccount(Address.of(resolvedAddress))
       if (account === null) {
-        logger.warn(`Account ${address} not found on Thor network`)
+        logger.warn(`Account ${resolvedAddress} (input: ${address}) not found on Thor network`)
         return thorErrorResponse('Account not found')
       }
 
@@ -56,7 +63,7 @@ export const getAccount: MCPTool = {
       const VTHO = HexStringSchema.parse(account.energy)
 
       const data = {
-        address,
+        address: resolvedAddress,
         VET: formatUnits(hexToBigInt(VET), 18),
         VTHO: formatUnits(hexToBigInt(VTHO), 18),
         type: account.hasCode === true ? 'contract' : 'wallet',
