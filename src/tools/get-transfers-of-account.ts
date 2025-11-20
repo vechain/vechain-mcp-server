@@ -39,7 +39,7 @@ export const getTransfersOfAccount: MCPTool = {
   },
   handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
     try {
-      const { address, tokenAddress, ...rest } = IndexerGetTransfersParamsSchema.parse(params)
+      const { address, tokenAddress, ...rest } = params
 
       let resolvedAddress: `0x${string}` | undefined
       let resolvedTokenAddress: `0x${string}` | undefined

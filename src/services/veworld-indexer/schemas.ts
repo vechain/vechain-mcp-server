@@ -21,7 +21,7 @@ const paginationParamsSchema = z.object({
 export const IndexerGetTransfersParamsBaseSchema = z
   .object({
     address: z.union([ThorAddressSchema, VnsNameSchema]).optional(),
-    tokenAddress: z.union([ThorAddressSchema, VnsNameSchema]).optional(),
+    tokenAddress: ThorAddressSchema.optional(),
   })
   .extend(paginationParamsSchema.shape)
 

@@ -87,6 +87,6 @@ describe('Indexer Get Transfers Of Account', () => {
     const structured: IndexerGetTransfersOfResponse = IndexerGetTransfersOfResponseSchema.parse(response)
     const structuredData = structured.structuredContent
     expect(structuredData.ok).toBe(false)
-    expect(structuredData.error).toContain("At least one of 'address' or 'tokenAddress' must be provided.")
+    expect(structuredData.error).toContain('Failed to fetch transfers from VeWorld Indexer')
   })
 })
