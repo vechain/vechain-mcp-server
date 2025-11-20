@@ -766,8 +766,12 @@ export const VevoteProposalResultsResponseSchema = indexerResponseSchema(
 // ***************************** Explorer: Block usage *****************************/
 export const IndexerExplorerBlockUsageParamsSchema = z
   .object({
-    startTimestamp: z.number().describe('Starting timestamp (Unix seconds, inclusive)'),
-    endTimestamp: z.number().describe('Ending timestamp (Unix seconds, inclusive; >= startTimestamp)'),
+    startTimestamp: z.coerce
+      .number()
+      .describe('Starting timestamp (Unix seconds, inclusive; coerced from string if needed)'),
+    endTimestamp: z.coerce
+      .number()
+      .describe('Ending timestamp (Unix seconds, inclusive; >= startTimestamp; coerced from string if needed)'),
   })
   .describe('Params for GET /api/v1/explorer/block-usage')
 
@@ -776,11 +780,12 @@ export const IndexerExplorerBlockUsageItemSchema = z
     blockId: ThorBlockIdSchema,
     blockNumber: ThorBlockNumberSchema,
     blockTimestamp: z.number(),
-    cumulativeGasLimit: z.number(),
-    cumulativeGasUsed: z.number(),
-    cumulativeBaseFeePerGas: z.number(),
-    cumulativeNumTransactions: z.number(),
-    cumulativeNumClauses: z.number(),
+    // API returns cumulative counters as JSON strings; coerce not used to preserve precision
+    cumulativeGasLimit: z.string(),
+    cumulativeGasUsed: z.string(),
+    cumulativeBaseFeePerGas: z.string().optional(),
+    cumulativeNumTransactions: z.string(),
+    cumulativeNumClauses: z.string(),
   })
   .describe('Cumulative block usage counters at a point in time')
 

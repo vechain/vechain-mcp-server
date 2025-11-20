@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
-import { veworldIndexerGet } from '@/services/veworld-indexer'
+import { veworldIndexerGet, veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
   IndexerExplorerBlockUsageItemSchema,
   IndexerExplorerBlockUsageParamsSchema,
@@ -23,7 +23,7 @@ export type IndexerExplorerBlockUsageResponse = z.infer<typeof IndexerExplorerBl
 
 export const getExplorerBlockUsage: MCPTool = {
   name: 'getExplorerBlockUsage',
-  title: 'Explorer: Block usage statistics',
+  title: 'Block usage statistics',
   description:
     'Get cumulative block usage statistics (gas, tx counts, clauses, base fee) over a timestamp range via /api/v1/explorer/block-usage. Query: startTimestamp, endTimestamp (Unix seconds, inclusive). Returns cumulative counters at sampled points; compute deltas client-side.',
   inputSchema: IndexerExplorerBlockUsageParamsSchema.shape,
@@ -34,14 +34,16 @@ export const getExplorerBlockUsage: MCPTool = {
   ): Promise<IndexerExplorerBlockUsageResponse> => {
     try {
       const parsed = IndexerExplorerBlockUsageParamsSchema.parse(params)
-      const response = await veworldIndexerGet<typeof IndexerExplorerBlockUsageItemSchema>({
+      // This endpoint returns a bare array (not paginated object)
+      const data = await veworldIndexerGetSingle<unknown[]>({
         endPoint: '/api/v1/explorer/block-usage',
         params: parsed as any,
       })
-      if (!response?.data) return indexerErrorResponse('Failed to fetch explorer block usage')
+      if (!data) return indexerErrorResponse('Failed to fetch explorer block usage')
+      const items = z.array(IndexerExplorerBlockUsageItemSchema).parse(data)
       return {
-        content: [{ type: 'text', text: JSON.stringify(response.data) }],
-        structuredContent: { ok: true, network: getThorNetworkType(), data: response.data },
+        content: [{ type: 'text', text: JSON.stringify(items) }],
+        structuredContent: { ok: true, network: getThorNetworkType(), data: items },
       }
     } catch (error) {
       logger.warn(`Error fetching explorer block usage: ${String(error)}`)
