@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getThorNetworkType, ThorAddressSchema } from '@/services/thor'
+import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import { IndexedHistoryEventSchema, IndexerGetHistoryParamsSchema } from '@/services/veworld-indexer/schemas'
 import {
@@ -7,7 +7,7 @@ import {
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
-import { resolveVnsOrAddress, VnsNameSchema } from '@/services/vns'
+import { resolveVnsOrAddress } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -16,12 +16,6 @@ import { logger } from '@/utils/logger'
  */
 
 const IndexerGetHistoryQueryParamsSchema = IndexerGetHistoryParamsSchema.omit({ address: true })
-
-const GetHistoryInputSchema = z
-  .object({
-    address: z.union([ThorAddressSchema, VnsNameSchema]).describe('The account address or VNS (.vet) name to retrieve'),
-  })
-  .extend(IndexerGetHistoryQueryParamsSchema.shape)
 
 export const IndexerGetHistoryOfAccountDataSchema = z.array(IndexedHistoryEventSchema)
 
@@ -41,7 +35,7 @@ export const getHistoryOfAccount: MCPTool = {
   name: 'getHistoryOfAccount',
   title: 'Get History of account',
   description: 'Get the transaction history of a given address',
-  inputSchema: GetHistoryInputSchema.shape,
+  inputSchema: IndexerGetHistoryParamsSchema.shape,
   outputSchema: IndexerGetHistoryOfAccountOutputSchema.shape,
   annotations: {
     idempotentHint: false,
@@ -49,16 +43,16 @@ export const getHistoryOfAccount: MCPTool = {
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async (params: z.infer<typeof GetHistoryInputSchema>): Promise<IndexerGetHistoryOfAccountResponse> => {
+  handler: async (
+    params: z.infer<typeof IndexerGetHistoryParamsSchema>,
+  ): Promise<IndexerGetHistoryOfAccountResponse> => {
     try {
-      const { address, ...queryParams } = GetHistoryInputSchema.parse(params)
+      const { address, ...queryParams } = params
 
-      const validatedParams = IndexerGetHistoryParamsSchema.parse({
+      const { address: validatedAddress, ...validatedQuery } = IndexerGetHistoryParamsSchema.parse({
         address: await resolveVnsOrAddress(address),
         ...queryParams,
       })
-
-      const { address: validatedAddress, ...validatedQuery } = validatedParams
 
       const response = await veworldIndexerGet<
         typeof IndexedHistoryEventSchema,
