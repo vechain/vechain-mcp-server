@@ -6,6 +6,7 @@ import {
   ThorBlockNumberSchema,
   ThorTransactionIdSchema,
 } from '../thor'
+import { VnsNameSchema } from '../vns'
 
 // ***************************** Indexer API params schemas *****************************/
 
@@ -19,8 +20,8 @@ const paginationParamsSchema = z.object({
 
 export const IndexerGetTransfersParamsBaseSchema = z
   .object({
-    address: ThorAddressSchema.optional(),
-    tokenAddress: ThorAddressSchema.optional(),
+    address: z.union([ThorAddressSchema, VnsNameSchema]).optional(),
+    tokenAddress: z.union([ThorAddressSchema, VnsNameSchema]).optional(),
   })
   .extend(paginationParamsSchema.shape)
 
