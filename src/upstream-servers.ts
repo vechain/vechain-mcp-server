@@ -36,8 +36,12 @@ export async function connectAllUpstreamServers() {
   const serverNames = Object.keys(UPSTREAM_SERVERS) as UpstreamServerName[]
 
   for (const serverName of serverNames) {
-    const client = await connectUpstreamServer(serverName)
-    upstreamClients[serverName] = client
+    try {
+      const client = await connectUpstreamServer(serverName)
+      upstreamClients[serverName] = client
+    } catch (error) {
+      logger.warn(`Failed to connect to upstream ${serverName}: ${String(error)}`)
+    }
   }
 
   return upstreamClients
@@ -52,7 +56,9 @@ async function connectUpstreamServer(serverName: UpstreamServerName): Promise<Cl
   const serverConfig = UPSTREAM_SERVERS[serverName]
   const transport = new StreamableHTTPClientTransport(new URL(serverConfig.url))
 
-  await client.connect(transport)
+  await client.connect(transport).catch(error => {
+    throw error
+  })
 
   logger.info(`Connected to ${serverName} MCP server`)
 

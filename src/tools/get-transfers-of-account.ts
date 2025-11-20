@@ -27,8 +27,9 @@ export type IndexerGetTransfersOfResponse = z.infer<typeof IndexerGetTransfersOf
  */
 export const getTransfersOfAccount: MCPTool = {
   name: 'getTransfersOfAccount',
-  title: 'Get Transfer events of account',
-  description: 'Get the Transfer events of a given address or token address',
+  title: 'Indexer: List transfers for wallet or token (v1)',
+  description:
+    "Query transfer events using VeWorld Indexer /api/v1/transfers. Provide either 'address' (wallet) or 'tokenAddress' (ERC-20) plus optional pagination. Use for 'wallet transfers', 'token movements', or 'activity for contract/wallet'.",
   inputSchema: IndexerGetTransfersParamsBaseSchema.shape,
   outputSchema: IndexerGetTransfersOfOutputSchema.shape,
   annotations: {
@@ -37,7 +38,9 @@ export const getTransfersOfAccount: MCPTool = {
     readOnlyHint: true,
     destructiveHint: false,
   },
-  handler: async (params: z.infer<typeof IndexerGetTransfersParamsSchema>): Promise<IndexerGetTransfersOfResponse> => {
+  handler: async (
+    params: z.infer<typeof IndexerGetTransfersParamsBaseSchema>,
+  ): Promise<IndexerGetTransfersOfResponse> => {
     try {
       const { address, tokenAddress, ...rest } = params
 
