@@ -57,9 +57,8 @@ export const getTransfersOfAccount: MCPTool = {
 
       const { address, tokenAddress, ...rest } = parsed
 
-      const resolvedAddress = address !== undefined ? await resolveVnsOrAddress(String(address)) : undefined
-      const resolvedTokenAddress =
-        tokenAddress !== undefined ? await resolveVnsOrAddress(String(tokenAddress)) : undefined
+      const resolvedAddress = address !== undefined ? await resolveVnsOrAddress(address) : undefined
+      const resolvedTokenAddress = tokenAddress !== undefined ? await resolveVnsOrAddress(tokenAddress) : undefined
 
       const indexerParams = {
         ...rest,

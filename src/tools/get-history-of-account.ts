@@ -54,7 +54,7 @@ export const getHistoryOfAccount: MCPTool = {
       const parsed = GetHistoryInputSchema.parse(params)
       const { address, ...queryParams } = parsed
 
-      const resolvedAddress = await resolveVnsOrAddress(String(address))
+      const resolvedAddress = await resolveVnsOrAddress(address)
       const resolvedAddressHex = resolvedAddress as `0x${string}`
 
       const validatedParams = IndexerGetHistoryParamsSchema.parse({
