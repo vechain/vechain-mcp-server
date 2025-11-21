@@ -790,6 +790,184 @@ export const IndexerExplorerBlockUsageItemSchema = z
   })
   .describe('Cumulative block usage counters at a point in time')
 
+// ***************************** B3TR Actions *****************************/
+// Reuse the SustainabilityProofV2Schema so all impact metric keys are explicitly typed and documented
+export const IndexerB3TRActionProofSchema = SustainabilityProofV2Schema
+
+export const IndexerB3TRActionSchema = z
+  .object({
+    blockNumber: ThorBlockNumberSchema,
+    blockTimestamp: z.number(),
+    blockId: ThorBlockIdSchema,
+    appId: z.string().describe('App identifier (veBetterDaoId)'),
+    distributor: ThorAddressSchema,
+    amount: z.number(),
+    receiver: ThorAddressSchema,
+    proof: IndexerB3TRActionProofSchema.optional(),
+  })
+  .describe('Single B3TR action entry')
+
+export const IndexerGetB3TRActionsForAppParamsSchema = z
+  .object({
+    appId: z.string().describe('veBetterDaoId of the app'),
+    after: z.number().optional().describe('Return actions after (inclusive) this timestamp in milliseconds'),
+    before: z.number().optional().describe('Return actions before (inclusive) this timestamp in milliseconds'),
+    page: z.number().optional(),
+    size: z.number().optional(),
+    direction: z.enum(['ASC', 'DESC']).optional(),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/apps/{appId}')
+
+export const IndexerB3TRActionsListResponseSchema = indexerResponseSchema(IndexerB3TRActionSchema).describe(
+  'List response for B3TR actions for an app',
+)
+
+// Params for user actions endpoint
+export const IndexerGetB3TRActionsForUserParamsSchema = z
+  .object({
+    wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
+    appId: z.string().optional().describe('Optional app ID to filter interactions'),
+    after: z.number().optional().describe('Return records after this time (Unix time in milliseconds)'),
+    before: z.number().optional().describe('Return records before this time (Unix time in milliseconds)'),
+    page: z.number().optional().describe('Zero-based page number'),
+    size: z.number().optional().describe('Page size'),
+    direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/users/{wallet}')
+
+// User overview (totals) endpoint
+export const IndexerGetB3TRUserOverviewParamsSchema = z
+  .object({
+    wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
+    roundId: z.number().optional().describe('Optional round id to filter by'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+      .optional()
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/users/{wallet}/overview')
+
+export const IndexerB3TRUserOverviewSchema = z
+  .object({
+    wallet: ThorAddressSchema,
+    totalRewardAmount: z.number(),
+    actionsRewarded: z.number(),
+    totalImpact: ImpactSchema.optional().describe(
+      'Aggregated sustainability impact totals across all rewarded actions for the user. Metrics include: carbon (g CO2), water (ml), energy (Wh), waste_mass (g), waste_items (count), waste_reduction (g), biodiversity (m² restored), people (beneficiaries), timber (g), plastic (g), education_time (minutes), trees_planted (count), calories_burned (kcal), clean_energy_production_wh (Wh), sleep_quality_percentage (%).',
+    ),
+    rankByReward: z.number().optional(),
+    rankByActionsRewarded: z.number().optional(),
+    uniqueXAppInteractions: z.array(z.string()).optional(),
+  })
+  .describe('B3TR user overview (totals and rankings)')
+
+// User daily summaries
+export const IndexerGetB3TRUserDailySummariesParamsSchema = z
+  .object({
+    wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be in yyyy-MM-dd format (UTC)')
+      .describe('Start date (UTC), format: yyyy-MM-dd'),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be in yyyy-MM-dd format (UTC)')
+      .describe('End date (UTC), format: yyyy-MM-dd'),
+    page: z.number().optional().describe('Zero-based page number'),
+    size: z.number().optional().describe('Page size'),
+    direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/users/{wallet}/daily-summaries')
+
+export const IndexerB3TRUserDailySummarySchema = z
+  .object({
+    entity: ThorAddressSchema.describe('Wallet address the daily summary pertains to'),
+    date: z.string().describe('Date of the summary (UTC, yyyy-MM-dd)'),
+    actionsRewarded: z.number().describe('Number of rewarded actions on this date'),
+    totalRewardAmount: z.number().describe('Total B3TR rewarded on this date'),
+    totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this date'),
+  })
+  .describe('Single daily summary entry for a user')
+
+export const IndexerB3TRUserDailySummariesResponseSchema = indexerResponseSchema(
+  IndexerB3TRUserDailySummarySchema,
+).describe('List response for B3TR user daily summaries')
+
+// B3TR app overview
+export const IndexerGetB3TRAppOverviewParamsSchema = z
+  .object({
+    appId: z.string().describe('veBetterDaoId of the app'),
+    roundId: z.number().optional().describe('Optional round id to filter by'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+      .optional()
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/apps/{appId}/overview')
+
+export const IndexerB3TRAppOverviewSchema = z
+  .object({
+    appId: z.string(),
+    totalRewardAmount: z.number().describe('Total B3TR rewards on this app'),
+    actionsRewarded: z.number().describe('Total number of rewarded actions on this app'),
+    totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals on this app'),
+    rankByReward: z.number().optional().describe('Ranking of the app by total reward amount'),
+    rankByActionsRewarded: z.number().optional().describe('Ranking of the app by number of rewarded actions'),
+    totalUniqueUserInteractions: z.number().optional().describe('Total unique users interacting with this app'),
+  })
+  .describe('B3TR app overview (totals and rankings)')
+
+// User overview for a specific app
+export const IndexerGetB3TRUserAppOverviewParamsSchema = z
+  .object({
+    wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
+    appId: z.string().describe('App ID (veBetterDaoId) to query by'),
+    roundId: z.number().optional().describe('Optional round id to filter by'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+      .optional()
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/users/{wallet}/app/{appId}/overview')
+
+export const IndexerB3TRUserAppOverviewSchema = z
+  .object({
+    wallet: ThorAddressSchema,
+    appId: z.string(),
+    totalRewardAmount: z.number(),
+    actionsRewarded: z.number(),
+    totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for the user on this app'),
+    rankByReward: z.number().optional(),
+    rankByActionsRewarded: z.number().optional(),
+  })
+  .describe('B3TR user overview for a specific app (totals and rankings)')
+
+// Global overview: GET /api/v1/b3tr/actions/global/overview
+export const IndexerGetB3TRGlobalOverviewParamsSchema = z
+  .object({
+    roundId: z.number().optional().describe('Optional round id to filter by'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+      .optional()
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/global/overview')
+
+export const IndexerB3TRGlobalOverviewSchema = z
+  .object({
+    totalRewardAmount: z.number(),
+    actionsRewarded: z.number(),
+    totalImpact: ImpactSchema.optional().describe(
+      'Aggregated sustainability impact totals across all rewarded actions globally.',
+    ),
+    totalUniqueUserInteractions: z.number().optional().describe('Total unique users interacting across all apps'),
+  })
+  .describe('Global B3TR action overview (totals)')
+
 // ***************************** Accounts overview *****************************/
 export const AccountsTimeFrameEnumSchema = z
   .enum(['DAY', 'WEEK', 'MONTH', 'YEAR', 'ALL'])
