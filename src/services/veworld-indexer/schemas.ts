@@ -968,6 +968,99 @@ export const IndexerB3TRGlobalOverviewSchema = z
   })
   .describe('Global B3TR action overview (totals)')
 
+// Users leaderboard: GET /api/v1/b3tr/actions/leaderboards/users
+export const IndexerB3TRLeaderboardSortBySchema = z
+  .enum(['totalRewardAmount', 'actionsRewarded'])
+  .describe('Sort users by totalRewardAmount or actionsRewarded')
+
+export const IndexerGetB3TRUsersLeaderboardParamsSchema = z
+  .object({
+    roundId: z.number().optional().describe('Optional round id to filter by'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+      .optional()
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+    size: z.number().optional().describe('The results page size'),
+    direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
+    sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
+    cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/leaderboards/users')
+
+export const IndexerB3TRUserLeaderboardEntrySchema = z
+  .object({
+    wallet: ThorAddressSchema,
+    totalRewardAmount: z.number(),
+    actionsRewarded: z.number(),
+    totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this user'),
+  })
+  .describe('Leaderboard entry for a user')
+
+export const IndexerB3TRUsersLeaderboardResponseSchema = indexerResponseSchema(
+  IndexerB3TRUserLeaderboardEntrySchema,
+).describe('List response for users leaderboard')
+
+// Apps leaderboard: GET /api/v1/b3tr/actions/leaderboards/apps
+export const IndexerGetB3TRAppsLeaderboardParamsSchema = z
+  .object({
+    roundId: z.number().optional().describe('Optional round id to filter by'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+      .optional()
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+    size: z.number().optional().describe('The results page size'),
+    direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
+    sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
+    cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/leaderboards/apps')
+
+export const IndexerB3TRAppLeaderboardEntrySchema = z
+  .object({
+    appId: z.string(),
+    totalRewardAmount: z.number(),
+    actionsRewarded: z.number(),
+    totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this app'),
+  })
+  .describe('Leaderboard entry for an app')
+
+export const IndexerB3TRAppsLeaderboardResponseSchema = indexerResponseSchema(
+  IndexerB3TRAppLeaderboardEntrySchema,
+).describe('List response for apps leaderboard')
+
+// App users leaderboard: GET /api/v1/b3tr/actions/leaderboards/apps/{appId}
+export const IndexerGetB3TRAppUsersLeaderboardParamsSchema = z
+  .object({
+    appId: z.string().describe('App ID (veBetterDaoId) to query by'),
+    roundId: z.number().optional().describe('Optional round id to filter by'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+      .optional()
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+    size: z.number().optional().describe('The results page size'),
+    direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
+    sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
+    cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
+  })
+  .describe('Params for GET /api/v1/b3tr/actions/leaderboards/apps/{appId}')
+
+export const IndexerB3TRAppUserLeaderboardEntrySchema = z
+  .object({
+    appId: z.string(),
+    user: ThorAddressSchema,
+    totalRewardAmount: z.number(),
+    actionsRewarded: z.number(),
+    totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this user on the app'),
+  })
+  .describe('Leaderboard entry for a user on a specific app')
+
+export const IndexerB3TRAppUsersLeaderboardResponseSchema = indexerResponseSchema(
+  IndexerB3TRAppUserLeaderboardEntrySchema,
+).describe('List response for app users leaderboard')
+
 // ***************************** Accounts overview *****************************/
 export const AccountsTimeFrameEnumSchema = z
   .enum(['DAY', 'WEEK', 'MONTH', 'YEAR', 'ALL'])
