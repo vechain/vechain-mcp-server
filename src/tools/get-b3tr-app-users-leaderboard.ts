@@ -10,6 +10,7 @@ import {
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
+import { enrichAddressesWithVns } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -72,8 +73,21 @@ export const getB3TRAppUsersLeaderboard: MCPTool = {
 
       if (!response?.data) return indexerErrorResponse('Failed to fetch app users leaderboard')
 
+      // Enrich user addresses with VNS names
+      const users = response.data.map((entry: any) => entry.user as `0x${string}`)
+      logger.info(`Enriching ${users.length} user addresses with VNS names...`)
+      const enrichedUsers = await enrichAddressesWithVns(users)
+      
+      const vnsCount = enrichedUsers.filter(u => u.vnsName).length
+      logger.info(`Found ${vnsCount} VNS names out of ${users.length} addresses`)
+      
+      const enrichedData = response.data.map((entry: any, index: number) => ({
+        ...entry,
+        vnsName: enrichedUsers[index].vnsName,
+      }))
+
       const list = {
-        data: response.data,
+        data: enrichedData,
         pagination: response.pagination,
       }
       const validated = IndexerB3TRAppUsersLeaderboardResponseSchema.parse(list)

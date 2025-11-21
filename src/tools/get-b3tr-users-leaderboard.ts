@@ -10,6 +10,7 @@ import {
   createIndexerToolResponseSchema,
   indexerErrorResponse,
 } from '@/services/veworld-indexer/utils'
+import { enrichAddressesWithVns } from '@/services/vns'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -70,8 +71,16 @@ export const getB3TRUsersLeaderboard: MCPTool = {
 
       if (!response?.data) return indexerErrorResponse('Failed to fetch B3TR users leaderboard')
 
+      // Enrich wallet addresses with VNS names
+      const wallets = response.data.map((entry: any) => entry.wallet as `0x${string}`)
+      const enrichedWallets = await enrichAddressesWithVns(wallets)
+      const enrichedData = response.data.map((entry: any, index: number) => ({
+        ...entry,
+        vnsName: enrichedWallets[index].vnsName,
+      }))
+
       const list = {
-        data: response.data,
+        data: enrichedData,
         pagination: response.pagination,
       }
       const validated = IndexerB3TRUsersLeaderboardResponseSchema.parse(list)

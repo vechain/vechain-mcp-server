@@ -994,6 +994,7 @@ export const IndexerB3TRUserLeaderboardEntrySchema = z
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this user'),
+    vnsName: z.string().nullable().optional().describe('VNS name for the wallet address if available'),
   })
   .describe('Leaderboard entry for a user')
 
@@ -1054,6 +1055,7 @@ export const IndexerB3TRAppUserLeaderboardEntrySchema = z
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this user on the app'),
+    vnsName: z.string().nullable().optional().describe('VNS name for the user address if available'),
   })
   .describe('Leaderboard entry for a user on a specific app')
 
