@@ -2,6 +2,17 @@ name: Publish Docker image
 
 on:
   workflow_call:
+    inputs:
+      image_tag:
+        description: 'Tag for the Docker image (defaults to git SHA)'
+        required: false
+        type: string
+        default: ''
+      set_latest:
+        description: 'Also tag as latest'
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
 
 permissions:
@@ -157,6 +168,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push (${{ matrix.platform }})
         id: build
         uses: docker/build-push-action@v5
@@ -165,8 +185,8 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           outputs: |
-            type=registry,name=ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.arch_suffix }}
-            type=registry,name=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}-${{ matrix.arch_suffix }}
+            type=registry,name=ghcr.io/${{ github.repository }}:${{ steps.tag.outputs.tag }}-${{ matrix.arch_suffix }}
+            type=registry,name=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}-${{ matrix.arch_suffix }}
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.platform }}
 
@@ -194,42 +214,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata (final tags)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/${{ github.repository }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
-          tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ github.sha }}
-            type=ref,event=branch
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create and push manifest lists
         shell: bash
         env:
-          TAGS: ${{ steps.meta.outputs.tags }}
           GH_IMAGE: ghcr.io/${{ github.repository }}
           ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
-          SHA: ${{ github.sha }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          SET_LATEST: ${{ inputs.set_latest }}
         run: |
           set -euo pipefail
           for image in "${GH_IMAGE}" "${ECR_IMAGE}"; do
             [ -z "$image" ] && continue
-            TAG_ARGS=""
-            while IFS= read -r tag; do
-              [ -z "$tag" ] && continue
-              if [[ "$tag" == "${image}:"* ]]; then
-                TAG_ARGS="$TAG_ARGS -t $tag"
-              fi
-            done <<< "$TAGS"
-            if [ -n "$TAG_ARGS" ]; then
-              docker buildx imagetools create \
-                $TAG_ARGS \
-                "${image}:${SHA}-amd64" \
-                "${image}:${SHA}-arm64"
+            TAG_ARGS="-t ${image}:${TAG}"
+            if [ "${SET_LATEST}" = "true" ]; then
+              TAG_ARGS="${TAG_ARGS} -t ${image}:latest"
             fi
+            docker buildx imagetools create \
+              ${TAG_ARGS} \
+              "${image}:${TAG}-amd64" \
+              "${image}:${TAG}-arm64"
           done
 
       - name: Cleanup arch tags in GHCR
@@ -238,7 +250,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SHA: ${{ github.sha }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
           PACKAGE_NAME="${REPOSITORY#*/}"
@@ -249,7 +261,7 @@ jobs:
                  -H "Accept: application/vnd.github+json" \
                  "$LIST_URL" || true)
           [ -z "$RESP" ] && exit 0
-          IDS=$(echo "$RESP" | jq -r --arg t1 "${SHA}-amd64" --arg t2 "${SHA}-arm64" '.[] | select((.metadata.container.tags // []) | index($t1) or index($t2)) | .id')
+          IDS=$(echo "$RESP" | jq -r --arg t1 "${TAG}-amd64" --arg t2 "${TAG}-arm64" '.[] | select((.metadata.container.tags // []) | index($t1) or index($t2)) | .id')
           for id in $IDS; do
             curl -fsS -X DELETE -H "Authorization: Bearer ${GH_TOKEN}" \
                  -H "Accept: application/vnd.github+json" \
@@ -259,12 +271,12 @@ jobs:
       - name: Cleanup arch tags in ECR
         shell: bash
         env:
-          SHA: ${{ github.sha }}
+          TAG: ${{ steps.tag.outputs.tag }}
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
           set -euo pipefail
-          TARGET1="${SHA}-amd64"
-          TARGET2="${SHA}-arm64"
+          TARGET1="${TAG}-amd64"
+          TARGET2="${TAG}-arm64"
 
           delete_targets() {
             local tag
@@ -295,5 +307,3 @@ jobs:
           }
 
           delete_targets "$TARGET1" "$TARGET2"
-
-
