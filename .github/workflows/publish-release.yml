@@ -11,21 +11,17 @@ permissions:
   id-token: write
 
 jobs:
-  publish-to-npmjs:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js for npmjs.org
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: 'npm'
 
       - name: Install dependencies
@@ -36,6 +32,35 @@ jobs:
 
       - name: Set package version from tag
         run: npm version "${GITHUB_REF_NAME}" --no-git-tag-version --allow-same-version
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            dist/
+            package.json
+            package-lock.json
+            README.md
+            LICENSE
+
+  publish-to-npmjs:
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Setup Node.js for npmjs.org
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
 
       - name: Publish to npmjs.org
         run: npm publish --provenance --access public --tag latest
@@ -43,30 +68,22 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-to-github-packages:
+    needs: [build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
+          name: build-output
 
       - name: Setup Node.js for GitHub Packages
         uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Set package version from tag
-        run: npm version "${GITHUB_REF_NAME}" --no-git-tag-version --allow-same-version
 
       - name: Publish to GitHub Packages
         run: npm publish --tag latest

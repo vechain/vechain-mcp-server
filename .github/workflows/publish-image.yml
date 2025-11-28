@@ -24,6 +24,20 @@ env:
   ECR_REPOSITORY: mcp-server
 
 jobs:
+  determine-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
   validate:
     if: github.event_name != 'workflow_dispatch' || github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -124,7 +138,7 @@ jobs:
         run: docker stop vechain-mcp-ci || true
 
   build:
-    needs: [validate]
+    needs: [validate, determine-tag]
     strategy:
       fail-fast: false
       matrix:
@@ -168,15 +182,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine image tag
-        id: tag
-        run: |
-          if [ -n "${{ inputs.image_tag }}" ]; then
-            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build and push (${{ matrix.platform }})
         id: build
         uses: docker/build-push-action@v5
@@ -185,13 +190,13 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           outputs: |
-            type=registry,name=ghcr.io/${{ github.repository }}:${{ steps.tag.outputs.tag }}-${{ matrix.arch_suffix }}
-            type=registry,name=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}-${{ matrix.arch_suffix }}
+            type=registry,name=ghcr.io/${{ github.repository }}:${{ needs.determine-tag.outputs.tag }}-${{ matrix.arch_suffix }}
+            type=registry,name=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.determine-tag.outputs.tag }}-${{ matrix.arch_suffix }}
           cache-from: type=gha,scope=${{ github.ref_name }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-${{ matrix.platform }}
 
   merge-manifest:
-    needs: [build]
+    needs: [build, determine-tag]
     runs-on: ubuntu-latest
     steps:
       - name: Set up Docker Buildx
@@ -214,21 +219,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine image tag
-        id: tag
-        run: |
-          if [ -n "${{ inputs.image_tag }}" ]; then
-            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create and push manifest lists
         shell: bash
         env:
           GH_IMAGE: ghcr.io/${{ github.repository }}
           ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ needs.determine-tag.outputs.tag }}
           SET_LATEST: ${{ inputs.set_latest }}
         run: |
           set -euo pipefail
@@ -250,7 +246,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ needs.determine-tag.outputs.tag }}
         run: |
           set -euo pipefail
           PACKAGE_NAME="${REPOSITORY#*/}"
@@ -271,7 +267,7 @@ jobs:
       - name: Cleanup arch tags in ECR
         shell: bash
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ needs.determine-tag.outputs.tag }}
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
           set -euo pipefail
