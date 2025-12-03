@@ -303,3 +303,38 @@ jobs:
           }
 
           delete_targets "$TARGET1" "$TARGET2"
+
+  deploy-ecs:
+    needs: [merge-manifest]
+    if: ${{ inputs.set_latest == true }}
+    runs-on: ubuntu-latest
+    env:
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to ECS (if service exists)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].status' \
+            --output text 2>/dev/null || echo "MISSING")
+
+          if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+            echo "Service exists and is active, forcing new deployment..."
+            aws ecs update-service \
+              --cluster "$ECS_CLUSTER" \
+              --service "$ECS_SERVICE" \
+              --force-new-deployment
+            echo "Deployment triggered successfully"
+          else
+            echo "Service does not exist or is not active (status: $SERVICE_STATUS), skipping deployment"
+          fi
