@@ -34,7 +34,7 @@
     "test": "jest --config jest.config.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.20.1",
+    "@modelcontextprotocol/sdk": "^1.24.0",
     "@vechain/sdk-core": "^2.0.5",
     "@vechain/sdk-network": "^2.0.5",
     "cors": "^2.8.5",
