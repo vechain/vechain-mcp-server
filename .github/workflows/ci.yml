@@ -35,6 +35,9 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    with:
+      set_latest: true
+      environment: dev
     secrets: inherit
 
 
