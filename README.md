@@ -327,7 +327,7 @@ discourse-mcp --transport http --site https://vechain.discourse.group
 
 **Important:** The `--transport http` flag is required to run Discourse MCP as an HTTP server that the VeBetterDAO MCP can connect to as an upstream server. Without this flag, it will run in STDIO mode (designed for direct AI client integration like Claude Desktop).
 
-The Discourse server runs on `http://localhost:3100` by default. The VeBetterDAO MCP will automatically connect to it via SSE if running.
+The Discourse server runs on `http://localhost:3000` by default. The VeChain MCP will automatically connect to it if running.
 
 **Without Discourse MCP:**
 - Forum tools will provide direct URLs to view discussions manually
