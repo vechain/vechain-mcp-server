@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "vechain": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@vechain/mcp-server@latest"
+      ],
+      "env": {
+        "VECHAIN_NETWORK": "mainnet"
+      }
+    },
+    "vechain-local": {
+      "command": "node",
+      "args": [
+        "/Users/roisindowling/Desktop/Code/vebetterdao-mcp/dist/stdio.js"
+      ],
+      "env": {
+        "VECHAIN_NETWORK": "mainnet"
+      }
+    }
+  }
+}
