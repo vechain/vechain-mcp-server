@@ -79,4 +79,23 @@ describe('getTokenFiatPrice (integration)', () => {
     expect(typeof data.error === 'string' || data.error === undefined).toBe(true)
   })
 
+  test('should get B3TR price in USD from oracle', async () => {
+    const response = await client.callTool({
+      name: 'getTokenFiatPrice',
+      arguments: {
+        token: 'B3TR',
+        fiat: 'USD',
+      },
+    })
+
+    expect(response.content).toBeDefined()
+
+    const data = TokenFiatPriceDataSchema.parse(response.structuredContent)
+
+    expect(data.token).toBe('b3tr')
+    expect(data.fiat).toBe('usd')
+    expect(typeof data.price).toBe('number')
+    expect(data.source).toBe('oracle')
+    expect(typeof data.error === 'string' || data.error === undefined).toBe(true)
+  })
 })

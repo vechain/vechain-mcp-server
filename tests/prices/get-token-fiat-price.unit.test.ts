@@ -13,18 +13,23 @@ describe('getTokenFiatPrice tool (unit)', () => {
     global.fetch = originalFetch
   })
 
+  // Helper to create mock oracle response
+  // Oracle returns price scaled by 1e12
+  const mockOracleResponse = (priceScaled: bigint) => ({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    text: async () => '',
+    json: async () => ([{
+      data: '0x' + priceScaled.toString(16).padStart(64, '0') + '0'.repeat(64),
+      reverted: false,
+    }]),
+  })
+
   test('returns structured data with price for VET in USD from oracle', async () => {
-    // Mock oracle response (Thor node POST /accounts/{address})
-    // Price: 0.0148 * 1e12 = 14800000000 = 0x34630b8a00
-    ;(global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-      json: async () => ([{
-        data: '0x' + '0000000000000000000000000000000000000000000000000000034630b8a000' + '0000000000000000000000000000000000000000000000000000000000000000',
-        reverted: false,
-      }]),
-    })
+    // Price: 0.0148 * 1e12 = 14,800,000,000
+    const priceScaled = BigInt(14_800_000_000)
+    ;(global.fetch as jest.Mock).mockResolvedValue(mockOracleResponse(priceScaled))
 
     const result = await getTokenFiatPrice.handler({ token: 'VET', fiat: 'USD' })
     const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
@@ -38,14 +43,9 @@ describe('getTokenFiatPrice tool (unit)', () => {
   })
 
   test('returns structured data with price for VTHO in USD from oracle', async () => {
-    // Price: 0.001 * 1e12 = 1000000000 = 0xe8d4a51000
-    ;(global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ([{
-        data: '0x' + '000000000000000000000000000000000000000000000000000000e8d4a51000' + '0000000000000000000000000000000000000000000000000000000000000000',
-        reverted: false,
-      }]),
-    })
+    // Price: 0.001 * 1e12 = 1,000,000,000
+    const priceScaled = BigInt(1_000_000_000)
+    ;(global.fetch as jest.Mock).mockResolvedValue(mockOracleResponse(priceScaled))
 
     const result = await getTokenFiatPrice.handler({ token: 'VTHO', fiat: 'USD' })
     const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
@@ -58,23 +58,30 @@ describe('getTokenFiatPrice tool (unit)', () => {
     expect(data.error).toBeUndefined()
   })
 
+  test('returns structured data with price for B3TR in USD from oracle', async () => {
+    // Price: 0.027 * 1e12 = 27,000,000,000
+    const priceScaled = BigInt(27_000_000_000)
+    ;(global.fetch as jest.Mock).mockResolvedValue(mockOracleResponse(priceScaled))
+
+    const result = await getTokenFiatPrice.handler({ token: 'B3TR', fiat: 'USD' })
+    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
+
+    expect(data.token).toBe('b3tr')
+    expect(data.fiat).toBe('usd')
+    expect(data.source).toBe('oracle')
+    expect(typeof data.price).toBe('number')
+    expect(data.price).toBeCloseTo(0.027, 4)
+    expect(data.error).toBeUndefined()
+  })
+
   test('returns structured data with price for VET in EUR from oracle', async () => {
-    // First call: VET-USD price, Second call: EUR-USD rate
+    // First call: VET-USD price (0.0148), Second call: EUR-USD rate (0.94)
+    const vetUsdScaled = BigInt(14_800_000_000)   // 0.0148 * 1e12
+    const eurUsdScaled = BigInt(940_000_000_000)  // 0.94 * 1e12
+
     ;(global.fetch as jest.Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ([{
-          data: '0x' + '0000000000000000000000000000000000000000000000000000034630b8a000' + '0000000000000000000000000000000000000000000000000000000000000000',
-          reverted: false,
-        }]),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ([{
-          data: '0x' + '00000000000000000000000000000000000000000000000000000d4a4d2c6000' + '0000000000000000000000000000000000000000000000000000000000000000',
-          reverted: false,
-        }]),
-      })
+      .mockResolvedValueOnce(mockOracleResponse(vetUsdScaled))
+      .mockResolvedValueOnce(mockOracleResponse(eurUsdScaled))
 
     const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'eur' })
     const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
@@ -91,6 +98,7 @@ describe('getTokenFiatPrice tool (unit)', () => {
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
+      text: async () => 'Server error',
     })
 
     const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'usd' })
