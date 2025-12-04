@@ -49,6 +49,13 @@ export { getValidatorBlockRewards } from './get-validator-block-rewards'
 export { getValidatorMissedPercentage } from './get-validator-missed-percentage'
 export { getExplorerBlockUsage } from './get-explorer-block-usage'
 export { getValidatorRegistry } from './get-validator-registry'
+export {
+  searchDiscourseForum,
+  getDiscourseLatestTopics,
+  getDiscourseTopic,
+  getDiscoursePost,
+  getDiscourseCategories,
+} from './discourse-forum'
 export { getAppHubApps } from './get-app-hub'
 export { getB3TRActionsForApp } from './get-b3tr-actions-for-app'
 export { getB3TRAppOverview } from './get-b3tr-app-overview'
@@ -60,3 +67,9 @@ export { getB3TRGlobalOverview } from './get-b3tr-global-overview'
 export { getB3TRUsersLeaderboard } from './get-b3tr-users-leaderboard'
 export { getB3TRAppsLeaderboard } from './get-b3tr-apps-leaderboard'
 export { getB3TRAppUsersLeaderboard } from './get-b3tr-app-users-leaderboard'
+export { getB3TRProposalsResults } from './get-b3tr-proposals-results'
+export { getB3TRProposalComments } from './get-b3tr-proposal-comments'
+export { getIPFSContent } from './get-ipfs-content'
+export { getTokenBalances } from './get-token-balances'
+export { getCurrentRoundTool } from './get-current-round'
+export { getGMNFTStatus } from './get-gm-nft-status'
