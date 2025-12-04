@@ -13,11 +13,8 @@
     "vechain-local": {
       "command": "node",
       "args": [
-        "/Users/roisindowling/Desktop/Code/vebetterdao-mcp/dist/stdio.js"
-      ],
-      "env": {
-        "VECHAIN_NETWORK": "mainnet"
-      }
+        "./dist/stdio.js"
+      ]
     }
   }
 }
