@@ -1,5 +1,5 @@
-import { z } from 'zod'
 import { logger } from '@/utils/logger'
+import { getThorNetworkType, getThorNodeUrl } from '@/services/thor'
 import { encodeFunctionData, decodeFunctionResult } from 'viem'
 import type { Abi } from 'viem'
 
@@ -19,49 +19,9 @@ export const VEBETTERDAO_CONTRACTS = {
 } as const
 
 /**
- * ERC20 ABI for balance queries
+ * Re-export getThorNetworkType as getNetworkType for backwards compatibility
  */
-const ERC20_BALANCE_ABI = [
-  {
-    constant: true,
-    inputs: [{ name: 'account', type: 'address' }],
-    name: 'balanceOf',
-    outputs: [{ name: 'balance', type: 'uint256' }],
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'decimals',
-    outputs: [{ name: '', type: 'uint8' }],
-    type: 'function',
-  },
-] as const
-
-/**
- * Get Thor node URL based on environment variable
- */
-function getThorNodeUrl(): string {
-  const network = (process.env.VECHAIN_NETWORK || 'mainnet').toLowerCase()
-  
-  switch (network) {
-    case 'testnet':
-      return 'https://testnet.vechain.org'
-    case 'solo':
-      return 'http://localhost:8669'
-    case 'mainnet':
-    default:
-      return 'https://mainnet.vechain.org'
-  }
-}
-
-/**
- * Get network type string for responses
- * Exported for use in tool handlers
- */
-export function getNetworkType(): string {
-  return (process.env.VECHAIN_NETWORK || 'mainnet').toLowerCase()
-}
+export const getNetworkType = getThorNetworkType
 
 // ERC20 ABI for token operations
 const ERC20_ABI = [

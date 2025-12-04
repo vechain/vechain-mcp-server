@@ -9,8 +9,6 @@ import {
   createIndexerStructuredOutputSchema,
   createIndexerToolResponseSchema,
   indexerErrorResponse,
-  validatorEndpointsAvailable,
-  validatorEndpointsUnavailableMessage,
 } from '@/services/veworld-indexer/utils'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
@@ -27,7 +25,7 @@ export const getValidators: MCPTool = {
   name: 'getValidators',
   title: 'Indexer: Validators (v1)',
   description:
-    `Retrieve validator statistics via /api/v1/validators for Stargate NFT delegation decisions.
+    `Retrieve validator statistics via /api/v1/validators for Stargate NFT delegation decisions and validator performance.
 
 KEY METRICS:
 - nftYieldsNextCycle: Projected APY (%) for each Stargate NFT level in the next cycle
@@ -38,7 +36,7 @@ KEY METRICS:
 FILTERS:
 - validatorId: Filter by specific validator address
 - endorser: Filter by endorser address  
-- status: NONE, QUEUED, ACTIVE, EXITED, EXITING
+- status: NONE, QUEUED, ACTIVE, EXITED, EXITING - only filter by ACTIVE for currently operating validators and all when getting nft yields
 
 SORTING (sortBy parameter):
 - For NFT delegation: Use 'nft:<Level>' (e.g., 'nft:Dawn', 'nft:Thunder') to sort by APY
@@ -65,9 +63,6 @@ VALIDATOR RECOMMENDATION GUIDELINES:
     params: z.infer<typeof IndexerGetValidatorsParamsSchema>,
   ): Promise<IndexerGetValidatorsResponse> => {
     try {
-      if (!(await validatorEndpointsAvailable())) {
-        return indexerErrorResponse(validatorEndpointsUnavailableMessage())
-      }
       const parsed = IndexerGetValidatorsParamsSchema.parse(params ?? {})
       const response = await veworldIndexerGet<typeof IndexerValidatorSchema, typeof IndexerGetValidatorsParamsSchema>(
         {
