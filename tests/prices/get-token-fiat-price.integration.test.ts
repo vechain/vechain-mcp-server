@@ -19,7 +19,7 @@ describe('getTokenFiatPrice (integration)', () => {
     await client.close()
   })
 
-  test('should get VET price in USD (shape check)', async () => {
+  test('should get VET price in USD from oracle', async () => {
     const response = await client.callTool({
       name: 'getTokenFiatPrice',
       arguments: {
@@ -35,11 +35,11 @@ describe('getTokenFiatPrice (integration)', () => {
     expect(data.token).toBe('vet')
     expect(data.fiat).toBe('usd')
     expect(typeof data.price).toBe('number')
-    expect(data.source).toBe('coingecko')
+    expect(data.source).toBe('oracle')
     expect(typeof data.error === 'string' || data.error === undefined).toBe(true)
   })
 
-  test('should get VET price in EUR (shape check)', async () => {
+  test('should get VET price in EUR from oracle', async () => {
     const response = await client.callTool({
       name: 'getTokenFiatPrice',
       arguments: {
@@ -55,16 +55,16 @@ describe('getTokenFiatPrice (integration)', () => {
     expect(data.token).toBe('vet')
     expect(data.fiat).toBe('eur')
     expect(typeof data.price).toBe('number')
-    expect(data.source).toBe('coingecko')
+    expect(data.source).toBe('oracle')
     expect(typeof data.error === 'string' || data.error === undefined).toBe(true)
   })
 
-  test('should get VOT3 price in EUR (shape check)', async () => {
+  test('should get VTHO price in USD from oracle', async () => {
     const response = await client.callTool({
       name: 'getTokenFiatPrice',
       arguments: {
-        token: 'VOT3',
-        fiat: 'EUR',
+        token: 'VTHO',
+        fiat: 'USD',
       },
     })
 
@@ -72,10 +72,11 @@ describe('getTokenFiatPrice (integration)', () => {
 
     const data = TokenFiatPriceDataSchema.parse(response.structuredContent)
 
-    expect(data.token).toBe('vot3')
-    expect(data.fiat).toBe('eur')
+    expect(data.token).toBe('vtho')
+    expect(data.fiat).toBe('usd')
     expect(typeof data.price).toBe('number')
-    expect(data.source).toBe('coingecko')
+    expect(data.source).toBe('oracle')
     expect(typeof data.error === 'string' || data.error === undefined).toBe(true)
   })
+
 })
