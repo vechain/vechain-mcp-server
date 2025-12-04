@@ -1,9 +1,10 @@
-import { getTokenFiatPriceFromCoinGecko } from '@/services/coingecko'
+import { getTokenFiatPriceFromCoinGecko, clearPriceCache } from '@/services/coingecko'
 
 describe('CoinGecko client', () => {
   const originalFetch = global.fetch
 
   beforeEach(() => {
+    clearPriceCache()
     global.fetch = jest.fn()
   })
 
