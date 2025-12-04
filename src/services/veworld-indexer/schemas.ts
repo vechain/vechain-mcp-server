@@ -1086,6 +1086,53 @@ export const AccountsTotalsParamsSchema = z
   .extend(paginationParamsSchema.shape)
   .describe('Params for GET /api/v1/accounts/totals')
 
+  // B3TR Proposals Results: GET /api/v2/b3tr/proposals/results
+export const ProposalStateSchema = z.enum([
+  'Pending',
+  'Active',
+  'Canceled',
+  'Defeated',
+  'Succeeded',
+  'Queued',
+  'Executed',
+  'DepositNotMet',
+  'InDevelopment',
+  'Completed',
+]).describe('Possible states for a B3TR proposal')
+
+export const ProposalVoteResultSchema = z.object({
+  voters: z.number().int().nonnegative().describe('Number of voters'),
+  totalWeight: NumericString.describe('Total voting weight as a string'),
+  totalPower: NumericString.describe('Total voting power as a string'),
+}).describe('Vote result details for a proposal')
+
+export const ProposalResultsSchema = z.object({
+  forResult: ProposalVoteResultSchema.describe('Votes in favor'),
+  againstResult: ProposalVoteResultSchema.describe('Votes against'),
+  abstainResult: ProposalVoteResultSchema.describe('Abstain votes'),
+}).describe('Aggregated voting results for a proposal')
+
+export const IndexerB3TRProposalEntrySchema = z.object({
+  proposalId: NumericString.describe('Unique identifier for the proposal'),
+  createdAtBlockNumber: z.number().int().nonnegative().describe('Block number when proposal was created'),
+  startRoundId: z.number().int().nonnegative().describe('Round ID when proposal voting starts'),
+  state: ProposalStateSchema.describe('Current state of the proposal'),
+  description: z.string().describe('IPFS hash or description of the proposal'),
+  results: ProposalResultsSchema.optional().describe('Voting results (only present if votes have been cast)'),
+}).describe('Details of a B3TR proposal')
+
+export const IndexerGetB3TRProposalsResultsParamsSchema = z.object({
+  proposalId: NumericString.optional().describe('Optional: Filter by specific proposal ID. When provided, returns only the matching proposal. Use this to query a specific proposal directly instead of fetching all proposals.'),
+  page: z.number().int().nonnegative().optional().describe('Zero-based results page number (default: 0)'),
+  size: z.number().int().positive().optional().describe('Results per page (default: 20)'),
+  direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction (default: DESC)'),
+  states: z.array(ProposalStateSchema).optional().describe('Filter by proposal states (optional)'),
+}).describe('Params for GET /api/v2/b3tr/proposals/results')
+
+export const IndexerB3TRProposalsResultsResponseSchema = indexerResponseSchema(
+  IndexerB3TRProposalEntrySchema,
+).describe('List response for B3TR proposals results')
+
 // ***************************** Accounts Overview (Thor Accounts) *****************************/
  
 
@@ -1277,3 +1324,29 @@ export const IndexerGetValidatorMissedPercentageParamsSchema = z
 export const IndexerValidatorMissedPercentageSchema = z
   .number()
   .describe('Percentage of missed blocks in the given range (0..100, not a decimal)')
+
+// B3TR Proposal Comments: GET /api/v1/b3tr/proposals/{proposalId}/comments
+export const ProposalSupportSchema = z.enum(['FOR', 'AGAINST', 'ABSTAIN']).describe('Vote support type')
+
+export const IndexerB3TRProposalCommentSchema = z.object({
+blockNumber: z.number().int().nonnegative().describe('Block number when the comment was made'),
+blockTimestamp: z.number().int().nonnegative().describe('Unix timestamp when the comment was made'),
+voter: ThorAddressSchema.describe('Address of the voter who made the comment'),
+proposalId: NumericString.describe('Proposal ID this comment is for'),
+support: ProposalSupportSchema.describe('Vote type (FOR, AGAINST, or ABSTAIN)'),
+weight: NumericString.describe('Voting weight as a string'),
+power: NumericString.describe('Voting power as a string'),
+reason: z.string().describe('The comment/reason text provided by the voter'),
+}).describe('A comment on a B3TR proposal')
+
+export const IndexerGetB3TRProposalCommentsParamsSchema = z.object({
+proposalId: NumericString.describe('Proposal ID to fetch comments for'),
+support: ProposalSupportSchema.optional().describe('Filter by support type (FOR, AGAINST, or ABSTAIN)'),
+page: z.number().int().nonnegative().optional().describe('Zero-based results page number (default: 0)'),
+size: z.number().int().positive().optional().describe('Results per page (default: 20)'),
+direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction (default: DESC)'),
+}).describe('Params for GET /api/v1/b3tr/proposals/{proposalId}/comments')
+
+export const IndexerB3TRProposalCommentsResponseSchema = indexerResponseSchema(
+IndexerB3TRProposalCommentSchema,
+).describe('List response for B3TR proposal comments')

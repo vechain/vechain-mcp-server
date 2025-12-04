@@ -1,9 +1,11 @@
 import { getTokenFiatPrice, TokenFiatPriceDataSchema } from '@/tools/get-token-fiat-price'
+import { clearPriceCache } from '@/services/coingecko'
 
 describe('getTokenFiatPrice tool (unit)', () => {
   const originalFetch = global.fetch
 
   beforeEach(() => {
+    clearPriceCache()
     global.fetch = jest.fn()
   })
 

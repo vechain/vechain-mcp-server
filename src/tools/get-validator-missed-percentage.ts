@@ -9,8 +9,6 @@ import {
   createIndexerStructuredOutputSchema,
   createIndexerToolResponseSchema,
   indexerErrorResponse,
-  validatorEndpointsAvailable,
-  validatorEndpointsUnavailableMessage,
 } from '@/services/veworld-indexer/utils'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
@@ -40,9 +38,6 @@ export const getValidatorMissedPercentage: MCPTool = {
     params: z.infer<typeof IndexerGetValidatorMissedPercentageParamsSchema>,
   ): Promise<IndexerGetValidatorMissedPercentageResponse> => {
     try {
-      if (!(await validatorEndpointsAvailable())) {
-        return indexerErrorResponse(validatorEndpointsUnavailableMessage())
-      }
       const parsed = IndexerGetValidatorMissedPercentageParamsSchema.parse(params)
       const endpoint = `/api/v1/validators/blocks/missed/${parsed.validator}`
       const data = await veworldIndexerGetSingle<number>({
