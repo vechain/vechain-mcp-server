@@ -25,7 +25,7 @@ export const getValidators: MCPTool = {
   name: 'getValidators',
   title: 'Indexer: Validators (v1)',
   description:
-    `Retrieve validator statistics via /api/v1/validators for Stargate NFT delegation decisions and validator performance.
+    `Retrieve validator statistics via /api/v1/validators for Stargate NFT delegation decisions and validator performance. **IMPORTANT: Look at all no status filter when getting validators when getting nft yields, when getting current validator not nft yields look at status=ACTIVE**
 
 KEY METRICS:
 - nftYieldsNextCycle: Projected APY (%) for each Stargate NFT level in the next cycle
