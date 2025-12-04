@@ -73,4 +73,12 @@ const getThorNetworkType = (): ThorNetworkType => {
   return networkConfig.type
 }
 
-export { getThorClient, getThorNetworkType, initThor, ThorNetworkType }
+/**
+ * Get the Thor node URL for the configured network
+ */
+const getThorNodeUrl = (): string => {
+  const { networkConfig } = initThor()
+  return networkConfig.url
+}
+
+export { getThorClient, getThorNetworkType, getThorNodeUrl, initThor, ThorNetworkType }
