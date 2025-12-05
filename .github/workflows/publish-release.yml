@@ -66,7 +66,7 @@ jobs:
         run: npm install -g npm@latest
 
       - name: Publish to npmjs.org
-        run: npm publish --provenance --access public --tag latest
+        run: npm publish --access public --tag latest
 
   publish-to-github-packages:
     needs: [build]
