@@ -8,6 +8,7 @@ export enum UpstreamServerName {
   VEBETTER_DAO = 'vebetterdao',
   VEVOTE = 'vevote',
   STARGATE = 'stargate',
+  DISCOURSE = 'discourse',
 }
 
 const UPSTREAM_SERVERS = {
@@ -26,6 +27,9 @@ const UPSTREAM_SERVERS = {
   [UpstreamServerName.STARGATE]: {
     url: 'https://docs.stargate.vechain.org/~gitbook/mcp',
   },
+  [UpstreamServerName.DISCOURSE]: {
+    url: process.env.DISCOURSE_MCP_URL || 'http://localhost:3000/mcp',
+  }
 }
 
 export type UpstreamClients = Partial<Record<UpstreamServerName, Client>>

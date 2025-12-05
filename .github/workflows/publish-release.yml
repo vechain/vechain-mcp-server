@@ -95,4 +95,5 @@ jobs:
     with:
       image_tag: ${{ github.ref_name }}
       set_latest: true
+      environment: prod
     secrets: inherit

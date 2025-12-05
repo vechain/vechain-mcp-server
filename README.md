@@ -39,12 +39,43 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open s
 * `searchDocsVevote` - Search VeVote documentation
 * `searchDocsStargate` - Search Stargate documentation
 
-### Thor Read Tools
+### Thor Blockchain Tools
 
-* `thorGetBlock` - Get compressed block information
-* `thorGetTransaction` - Get transaction information
+* `thorGetBlock` - Get block information
+* `thorGetTransaction` - Get transaction details
 * `thorGetAccount` - Get account information
-* `thorDecodeEvent` - Decode a raw event emitted on the thor network
+* `thorDecodeEvent` - Decode raw blockchain events
+
+### Token & NFT Tools
+
+* `getTokenBalances` - Get token balances for an account
+* `getTokenFiatPrice` - Get fiat price for tokens
+* `getTokenRegistry` - Get token registry information
+* `getNFTs` - Get NFTs owned by an account
+* `getNFTContracts` - Get NFT contract information
+
+### B3TR & VeBetterDAO Tools
+
+* `getB3TRGlobalOverview` - Get B3TR global statistics
+* `getB3TRAppsLeaderboard` - Get leaderboard of B3TR apps
+* `getB3TRProposalsResults` - Get B3TR proposal voting results
+* `getB3TRProposalComments` - Get on-chain voting comments
+* `getCurrentRound` - Get current VeBetterDAO round info
+* `getGMNFTStatus` - Check GM NFT status for an account
+
+### Stargate Staking Tools
+
+* `getStargateTotalVetStaked` - Get total VET staked
+* `getStargateTokenRewards` - Get staking rewards
+* `getValidators` - Get validator information
+
+### Transaction & Transfer Tools
+
+* `getTransactions` - Get transactions for an account
+* `getTransfersOfAccount` - Get token transfers
+* `getHistoryOfAccount` - Get account history
+
+*...and many more! Use the MCP inspector or ask your AI assistant to list all available tools.*
 
 ## Quick Start
 
@@ -170,7 +201,6 @@ curl -sS -m 10 -X POST http://localhost:4000/mcp \
 
 Notes:
 * MCP endpoint: `POST /mcp` (Content-Type: application/json, Accept: application/json, text/event-stream).
--
 
 ## Local Development Setup
 
@@ -278,6 +308,43 @@ npm run inspect
 ```
 
 This opens a browser interface where you can test individual tools and see their responses.
+
+
+### Discourse Forum Integration (Optional)
+
+**Forum tools are OPTIONAL** and work without the Discourse MCP server by providing forum URLs for manual viewing. To enable automated forum data fetching:
+
+```bash
+# Install globally
+npm install -g @discourse/mcp@latest
+
+# Run in HTTP transport mode with site pre-configured (recommended)
+npx -y @discourse/mcp@latest --transport http --site https://vechain.discourse.group
+
+# Or if installed globally
+discourse-mcp --transport http --site https://vechain.discourse.group
+```
+
+**Important:** The `--transport http` flag is required to run Discourse MCP as an HTTP server that the VeBetterDAO MCP can connect to as an upstream server. Without this flag, it will run in STDIO mode (designed for direct AI client integration like Claude Desktop).
+
+The Discourse server runs on `http://localhost:3000` by default. The VeChain MCP will automatically connect to it if running.
+
+**Without Discourse MCP:**
+- Forum tools will provide direct URLs to view discussions manually
+- Example: `https://vechain.discourse.group/t/proposal-name/559`
+
+**With Discourse MCP (HTTP mode):**
+- Forum tools will fetch full discussion content automatically
+- Analyze sentiment and extract key points programmatically
+
+**Quick Start Commands:**
+```bash
+# Terminal 1: Start Discourse MCP (with site pre-configured)
+npx -y @discourse/mcp@latest --transport http --site https://vechain.discourse.group
+
+# Terminal 2: Start VeBetterDAO MCP
+npm run dev
+```
 
 #### Running Automated Tests
 
