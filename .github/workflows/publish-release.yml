@@ -62,10 +62,11 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
+      - name: Ensure npm >= 11.5.1
+        run: npm install -g npm@latest
+
       - name: Publish to npmjs.org
         run: npm publish --provenance --access public --tag latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-to-github-packages:
     needs: [build]
