@@ -9,6 +9,7 @@ export enum UpstreamServerName {
   VEVOTE = 'vevote',
   STARGATE = 'stargate',
   DISCOURSE = 'discourse',
+  VORJ = 'vorj',
 }
 
 const UPSTREAM_SERVERS = {
@@ -29,7 +30,10 @@ const UPSTREAM_SERVERS = {
   },
   [UpstreamServerName.DISCOURSE]: {
     url: process.env.DISCOURSE_MCP_URL || 'http://localhost:3000/mcp',
-  }
+  },
+  [UpstreamServerName.VORJ]: {
+    url: 'https://docs.vorj.app/~gitbook/mcp',
+  },
 }
 
 export type UpstreamClients = Partial<Record<UpstreamServerName, Client>>
