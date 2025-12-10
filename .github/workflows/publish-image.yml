@@ -332,19 +332,45 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SERVICE_STATUS=$(aws ecs describe-services \
-            --cluster "$ECS_CLUSTER" \
-            --services "$ECS_SERVICE" \
-            --query 'services[0].status' \
-            --output text 2>/dev/null || echo "MISSING")
 
-          if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
-            echo "Service exists and is active, forcing new deployment..."
-            aws ecs update-service \
+          # Find all services whose ARN contains the ECS_SERVICE prefix
+          MATCHING_SERVICES=$(
+            aws ecs list-services \
               --cluster "$ECS_CLUSTER" \
-              --service "$ECS_SERVICE" \
-              --force-new-deployment
-            echo "Deployment triggered successfully"
-          else
-            echo "Service does not exist or is not active (status: $SERVICE_STATUS), skipping deployment"
+              --query "serviceArns[?contains(@, '${ECS_SERVICE}')]" \
+              --output text
+          )
+
+          if [ -z "$MATCHING_SERVICES" ]; then
+            echo "No ECS services found matching prefix: $ECS_SERVICE"
+            exit 0
           fi
+
+          echo "Found services:"
+          echo "$MATCHING_SERVICES" | tr '\t' '\n'
+
+          # Loop through each matching service ARN
+          for SERVICE_ARN in $MATCHING_SERVICES; do
+            SERVICE_NAME=$(basename "$SERVICE_ARN")  # extract service name
+
+            echo "Checking service: $SERVICE_NAME"
+
+            SERVICE_STATUS=$(
+              aws ecs describe-services \
+                --cluster "$ECS_CLUSTER" \
+                --services "$SERVICE_NAME" \
+                --query 'services[0].status' \
+                --output text 2>/dev/null || echo "MISSING"
+            )
+
+            if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+              echo "→ Service is ACTIVE. Triggering new deployment..."
+              aws ecs update-service \
+                --cluster "$ECS_CLUSTER" \
+                --service "$SERVICE_NAME" \
+                --force-new-deployment
+              echo "✔ Deployment updated for $SERVICE_NAME"
+            else
+              echo "→ Service $SERVICE_NAME is not active (status: $SERVICE_STATUS). Skipping."
+            fi
+          done
