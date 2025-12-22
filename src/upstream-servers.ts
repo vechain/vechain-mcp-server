@@ -10,6 +10,7 @@ export enum UpstreamServerName {
   STARGATE = 'stargate',
   DISCOURSE = 'discourse',
   VORJ = 'vorj',
+  SUPPORT = 'support',
 }
 
 const UPSTREAM_SERVERS = {
@@ -33,6 +34,9 @@ const UPSTREAM_SERVERS = {
   },
   [UpstreamServerName.VORJ]: {
     url: 'https://docs.vorj.app/~gitbook/mcp',
+  },
+  [UpstreamServerName.SUPPORT]: {
+    url: 'https://supportdocs.vechainlabs.io/~gitbook/mcp',
   },
 }
 
