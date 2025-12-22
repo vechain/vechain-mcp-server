@@ -1361,16 +1361,20 @@ export const IndexerValidatorBlockRewardSchema = z
     blockNumber: ThorBlockNumberSchema,
     blockTimestamp: z.number().describe('Block timestamp (Unix seconds)'),
     validator: ThorAddressSchema.describe('Validator address'),
-    blockReward: z.string().describe('Base VTHO reward for producing the block (as string)'),
-    priorityReward: z.string().describe('Priority fee rewards from users bidding in mempool (as string)'),
-    total: z.string().describe('Sum of blockReward and priorityReward (as string)'),
+    blockReward: z.string().optional().describe('Base VTHO reward for producing the block (as string)'),
+    priorityReward: z.string().optional().describe('Priority fee rewards from users bidding in mempool (as string)'),
+    total: z.string().optional().describe('Sum of blockReward and priorityReward (as string)'),
     status: IndexerValidatorBlockStatusSchema,
     delegatorRewards: z
       .string()
+      .optional()
       .describe(
         'Portion of total distributed to delegators (Stargate NFTs). Typically 70% when delegations are present.',
       ),
-    validatorRewards: z.string().describe('Portion of total retained by the validator after delegator share.'),
+    validatorRewards: z
+      .string()
+      .optional()
+      .describe('Portion of total retained by the validator after delegator share.'),
   })
   .describe('Per-block reward breakdown for a validator')
 
