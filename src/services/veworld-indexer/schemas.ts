@@ -23,7 +23,7 @@ const paginationParamsSchema = z
   })
   .describe('Pagination parameters for Indexer endpoints')
 
-  // ***************************** Indexer History schemas *****************************/
+// ***************************** Indexer History schemas *****************************/
 
 // basic types
 const UnixTimestamp = z.number().int().nonnegative()
@@ -73,10 +73,11 @@ const HistoryEventSearchBySchema = z.enum(['to', 'from', 'origin', 'gasPayer'])
 export const IndexerGetHistoryParamsSchema = z
   .object({
     address: z.union([ThorAddressSchema, VnsNameSchema]).describe('The account address or VNS (.vet) name to retrieve'),
-    eventName: z.union([
-      HistoryEventNameSchema,
-      z.array(HistoryEventNameSchema)
-    ]).nullable().optional().describe('Optional filter by event name(s). Can be a single event or an array of events'),
+    eventName: z
+      .union([HistoryEventNameSchema, z.array(HistoryEventNameSchema)])
+      .nullable()
+      .optional()
+      .describe('Optional filter by event name(s). Can be a single event or an array of events'),
     searchBy: HistoryEventSearchBySchema.nullable()
       .optional()
       .describe('Optional filter by search by (to, from, origin, gasPayer)'),
@@ -192,7 +193,7 @@ export const IndexerGetTransfersParamsSchema = IndexerGetTransfersParamsBaseSche
   {
     message: "At least one of 'address' or 'tokenAddress' must be provided.",
   },
-).describe("Validated parameters for GET /api/v1/transfers")
+).describe('Validated parameters for GET /api/v1/transfers')
 
 export const IndexerGetTransfersToParamsSchema = z
   .object({
@@ -229,29 +230,31 @@ export const IndexerFungibleTokenContractSchema = ThorAddressSchema.describe(
 )
 
 export const IndexerGetFungibleTokenContractsParamsSchema = z
-    .object({
-      address: ThorAddressSchema.describe('Owner wallet address whose fungible token contracts should be listed'),
-      officialTokens: z.boolean().default(true).describe('Return only official tokens when true'),
-    })
-    .extend(paginationParamsSchema.shape)
-    .describe(
-      'Parameters for GET /api/v1/transfers/fungible-tokens-contracts. Required address; optional officialTokens filter (defaults true) and pagination.',
-    )
-    
-export const IndexerTransferSchema = z.object({
-  id: z.string(),
-  blockId: ThorBlockIdSchema.optional(),
-  blockNumber: ThorBlockNumberSchema,
-  blockTimestamp: z.number(),
-  txId: ThorTransactionIdSchema.optional(),
-  from: ThorAddressSchema,
-  to: ThorAddressSchema,
-  value: z.string().describe('Transfer amount as a string (may be large)'),
-  tokenAddress: ThorAddressSchema.nullable().optional(),
-  topics: z.array(HexStringSchema),
-  tokenId: z.string().nullable().optional(),
-  eventType: z.enum(['FUNGIBLE_TOKEN', 'NFT', 'VET']),
-}).describe('A normalized transfer event (VET, fungible token, or NFT) returned by the Indexer')
+  .object({
+    address: ThorAddressSchema.describe('Owner wallet address whose fungible token contracts should be listed'),
+    officialTokens: z.boolean().default(true).describe('Return only official tokens when true'),
+  })
+  .extend(paginationParamsSchema.shape)
+  .describe(
+    'Parameters for GET /api/v1/transfers/fungible-tokens-contracts. Required address; optional officialTokens filter (defaults true) and pagination.',
+  )
+
+export const IndexerTransferSchema = z
+  .object({
+    id: z.string(),
+    blockId: ThorBlockIdSchema.optional(),
+    blockNumber: ThorBlockNumberSchema,
+    blockTimestamp: z.number(),
+    txId: ThorTransactionIdSchema.optional(),
+    from: ThorAddressSchema,
+    to: ThorAddressSchema,
+    value: z.string().describe('Transfer amount as a string (may be large)'),
+    tokenAddress: ThorAddressSchema.nullable().optional(),
+    topics: z.array(HexStringSchema),
+    tokenId: z.string().nullable().optional(),
+    eventType: z.enum(['FUNGIBLE_TOKEN', 'NFT', 'VET']),
+  })
+  .describe('A normalized transfer event (VET, fungible token, or NFT) returned by the Indexer')
 
 // ***************************** NFT schemas *****************************/
 export const IndexerNFTAssetSchema = z
@@ -353,14 +356,9 @@ export const IndexerTransactionSchema = z
     size: z.number().describe('Raw transaction size in bytes'),
     chainTag: z.number().optional().describe('Thor chain tag (network identifier)'),
     blockRef: z.coerce.string().describe('Block reference used to compute expiration'),
-    expiration: z
-      .number()
-      .describe('Number of blocks after blockRef before the transaction expires'),
+    expiration: z.number().describe('Number of blocks after blockRef before the transaction expires'),
     clauses: z.array(IndexerTransactionClauseSchema).describe('Clauses executed by this transaction'),
-    gasPriceCoef: z
-      .number()
-      .optional()
-      .describe('Gas price coefficient used in effective gas price calculation'),
+    gasPriceCoef: z.number().optional().describe('Gas price coefficient used in effective gas price calculation'),
     gas: z.number().describe('Gas limit for the transaction'),
     maxFeePerGas: z.coerce.string().optional().describe('Max fee per gas (hex wei)'),
     maxPriorityFeePerGas: z.coerce.string().optional().describe('Max priority fee per gas (hex wei)'),
@@ -415,7 +413,12 @@ export const IndexerGetContractTransactionsParamsSchema = z
     contractAddress: ThorAddressSchema.describe('Contract address that the transaction interacted with'),
     after: z.number().optional().describe('Return txs at or after this Unix timestamp (seconds)'),
     before: z.number().optional().describe('Return txs at or before this Unix timestamp (seconds)'),
-    expanded: z.boolean().optional().describe('Include decoded clause outputs/logs for richer results, would recommend to set to true to get the full transaction details'),
+    expanded: z
+      .boolean()
+      .optional()
+      .describe(
+        'Include decoded clause outputs/logs for richer results, would recommend to set to true to get the full transaction details',
+      ),
   })
   .extend(paginationParamsSchema.shape)
   .describe('Params for GET /api/v1/transactions/contract')
@@ -424,9 +427,7 @@ export const IndexerGetContractTransactionsParamsSchema = z
 // GET /api/v1/stargate/total-vtho-claimed
 export const IndexerStargateRewardsTypeSchema = z
   .string()
-  .describe(
-    'Optional rewards type filter. When omitted, total considers all Stargate rewards.',
-  )
+  .describe('Optional rewards type filter. When omitted, total considers all Stargate rewards.')
 
 export const IndexerGetStargateTotalVthoClaimedParamsSchema = z
   .object({
@@ -434,16 +435,14 @@ export const IndexerGetStargateTotalVthoClaimedParamsSchema = z
       'Optional block number to query a historical snapshot. Defaults to latest.',
     ),
     rewardsType: IndexerStargateRewardsTypeSchema.optional().describe(
-      'Type of rewards to include. If omitted, all Stargate rewards are counted. `LEGACY` refers to rewards claimed before the Hayabusa upgrade and is generally only useful for historical analysis. `DELEGATED` refers to rewards claimed after the Hayabusa upgrade and is the relevant type for current rewards.'
-    ),    
+      'Type of rewards to include. If omitted, all Stargate rewards are counted. `LEGACY` refers to rewards claimed before the Hayabusa upgrade and is generally only useful for historical analysis. `DELEGATED` refers to rewards claimed after the Hayabusa upgrade and is the relevant type for current rewards.',
+    ),
   })
   .describe('Params for GET /api/v1/stargate/total-vtho-claimed')
 
 export const IndexerStargateTotalVthoClaimedSchema = z
   .string()
-  .describe(
-    'Total VTHO claimed by Stargate users represented as a JSON string (API returns plain string).',
-  )
+  .describe('Total VTHO claimed by Stargate users represented as a JSON string (API returns plain string).')
 
 // GET /api/v1/stargate/total-vtho-generated
 export const IndexerGetStargateTotalVthoGeneratedParamsSchema = z
@@ -456,9 +455,7 @@ export const IndexerGetStargateTotalVthoGeneratedParamsSchema = z
 
 export const IndexerStargateTotalVthoGeneratedSchema = z
   .string()
-  .describe(
-    'Total VTHO generated by Stargate delegations represented as a JSON string (API returns plain string).',
-  )
+  .describe('Total VTHO generated by Stargate delegations represented as a JSON string (API returns plain string).')
 
 // GET /api/v1/stargate/total-vtho-claimed/{account}
 export const IndexerGetStargateTotalVthoClaimedByAccountParamsSchema = z
@@ -496,7 +493,8 @@ export const IndexerStargateTotalVthoClaimedByAccountTokenSchema = z
 export const IndexerStargatePeriodSchema = z
   .string()
   .transform(p => p.toUpperCase())
-  .pipe(z.enum(['DAY', 'WEEK', 'MONTH', 'YEAR', 'ALL'])).describe('Time period granularity for Stargate metrics')
+  .pipe(z.enum(['DAY', 'WEEK', 'MONTH', 'YEAR', 'ALL']))
+  .describe('Time period granularity for Stargate metrics')
   .describe(
     'Time period granularity for Stargate metrics. Accepted values: DAY, WEEK, MONTH, YEAR, ALL (case-insensitive).',
   )
@@ -536,13 +534,24 @@ export const IndexerStargateTokenSchema = z
     tokenId: z.string().describe('Stargate token id (stringified number)'),
     level: z.string().describe('Stargate NFT level'),
     owner: ThorAddressSchema.describe('Current owner wallet address'),
-    manager: ThorAddressSchema.nullable().describe('Optional manager address, a manager is a wallet that can manage the token'),
-    delegationStatus: z.string().describe('Delegation status for the token, can be "QUEUED", "ACTIVE", "EXITING" or "EXITED"'),
-    validatorId: z.string().nullable().describe('Validator id if delegated, the validator that the token is delegated to'),
-    totalRewardsClaimed: z.string().describe('Total VTHO claimed (string format), the total amount of VTHO claimed by the token, post hayabusa'),
+    manager: ThorAddressSchema.nullable().describe(
+      'Optional manager address, a manager is a wallet that can manage the token',
+    ),
+    delegationStatus: z
+      .string()
+      .describe('Delegation status for the token, can be "QUEUED", "ACTIVE", "EXITING" or "EXITED"'),
+    validatorId: z
+      .string()
+      .nullable()
+      .describe('Validator id if delegated, the validator that the token is delegated to'),
+    totalRewardsClaimed: z
+      .string()
+      .describe('Total VTHO claimed (string format), the total amount of VTHO claimed by the token, post hayabusa'),
     totalBootstrapRewardsClaimed: z
       .string()
-      .describe('Total bootstrap VTHO claimed (string format), the total amount of VTHO claimed by the token, pre hayabusa'),
+      .describe(
+        'Total bootstrap VTHO claimed (string format), the total amount of VTHO claimed by the token, pre hayabusa',
+      ),
     vetStaked: z.string().describe('VET staked amount (string format, wei)'),
     migrated: z.boolean().describe('Whether the token was migrated from old vechain nodes staking platform'),
     boosted: z.boolean().describe('Whether the token was boosted to skip the maturity period'),
@@ -576,7 +585,9 @@ export const IndexerStargateTokenRewardSchema = z
     cycle: z.number().optional().describe('Validator cycle number'),
     validator: ThorAddressSchema.describe('Validator address'),
     rewards: z.string().describe('Amount as string'),
-    rewardPeriod: z.string().describe('The type of reward period, can be "CYCLE", "DAY", "WEEK", "MONTH", "YEAR", "ALL"'),
+    rewardPeriod: z
+      .string()
+      .describe('The type of reward period, can be "CYCLE", "DAY", "WEEK", "MONTH", "YEAR", "ALL"'),
     dayOfMonth: z.number().optional().describe('Day of month'),
     weekOfYear: z.number().optional().describe('Week of year'),
     month: z.number().optional().describe('Month, 1-12'),
@@ -702,7 +713,9 @@ export const VevoteHistoricProposalSchema = z
   .object({
     id: z.string().describe('Unique identifier for the proposal made up of the contract address and the proposal id'),
     proposalId: z.string().describe('Legacy proposal id'),
-    contractAddress: ThorAddressSchema.describe('Legacy smart contract address, there are two main contracts for governance: 0xa6416a72f816d3a69f33d0814700545c8e3fe4be (Stakeholder Governance) and 0x7e54f0790153647ec0651c35ced28171adb5d44a (Steering Committee Governance)'),
+    contractAddress: ThorAddressSchema.describe(
+      'Legacy smart contract address, there are two main contracts for governance: 0xa6416a72f816d3a69f33d0814700545c8e3fe4be (Stakeholder Governance) and 0x7e54f0790153647ec0651c35ced28171adb5d44a (Steering Committee Governance)',
+    ),
     createdDate: z.string().optional().describe('Date the proposal was created'),
     proposer: ThorAddressSchema.describe('Address of the proposer'),
     title: z.string().describe('Title of the proposal'),
@@ -723,18 +736,22 @@ export const VevoteHistoricProposalSchema = z
 export const VevoteHistoricProposalsParamsSchema = z
   .object({
     proposalId: z.string().optional().describe('Filter by legacy proposal id'),
-    contractAddress: ThorAddressSchema.optional().describe('Filter by legacy smart contract address, there are two main contracts for governance: 0xa6416a72f816d3a69f33d0814700545c8e3fe4be (Stakeholder Governance) and 0x7e54f0790153647ec0651c35ced28171adb5d44a (Steering Committee Governance)'),
+    contractAddress: ThorAddressSchema.optional().describe(
+      'Filter by legacy smart contract address, there are two main contracts for governance: 0xa6416a72f816d3a69f33d0814700545c8e3fe4be (Stakeholder Governance) and 0x7e54f0790153647ec0651c35ced28171adb5d44a (Steering Committee Governance)',
+    ),
     testProposals: z.boolean().default(false).describe('Include test proposals when true'),
   })
   .extend(paginationParamsSchema.shape)
   .describe('Params for GET /api/v1/vevote/historic-proposals')
 
-export const VevoteHistoricProposalsResponseSchema = indexerResponseSchema(
-  VevoteHistoricProposalSchema,
-).describe('List response for legacy VeVote historic proposals')
+export const VevoteHistoricProposalsResponseSchema = indexerResponseSchema(VevoteHistoricProposalSchema).describe(
+  'List response for legacy VeVote historic proposals',
+)
 
 // ***************************** VeVote proposal results (current governance) *****************************/
-export const VevoteSupportEnumSchema = z.enum(['AGAINST', 'FOR', 'ABSTAIN']).describe('Support enum for the proposal, can be "AGAINST", "FOR" or "ABSTAIN"')
+export const VevoteSupportEnumSchema = z
+  .enum(['AGAINST', 'FOR', 'ABSTAIN'])
+  .describe('Support enum for the proposal, can be "AGAINST", "FOR" or "ABSTAIN"')
 
 export const VevoteProposalResultSchema = z
   .object({
@@ -760,9 +777,9 @@ export const VevoteProposalResultsParamsSchema = VevoteProposalResultsParamsBase
   { message: "At least one of 'proposalId' or 'support' must be provided." },
 ).describe('Validated params for /api/v1/vevote/proposal/results')
 
-export const VevoteProposalResultsResponseSchema = indexerResponseSchema(
-  VevoteProposalResultSchema,
-).describe('List response for VeVote proposal results')
+export const VevoteProposalResultsResponseSchema = indexerResponseSchema(VevoteProposalResultSchema).describe(
+  'List response for VeVote proposal results',
+)
 
 // ***************************** Explorer: Block usage *****************************/
 export const IndexerExplorerBlockUsageParamsSchema = z
@@ -1086,55 +1103,66 @@ export const AccountsTotalsParamsSchema = z
   .extend(paginationParamsSchema.shape)
   .describe('Params for GET /api/v1/accounts/totals')
 
-  // B3TR Proposals Results: GET /api/v2/b3tr/proposals/results
-export const ProposalStateSchema = z.enum([
-  'Pending',
-  'Active',
-  'Canceled',
-  'Defeated',
-  'Succeeded',
-  'Queued',
-  'Executed',
-  'DepositNotMet',
-  'InDevelopment',
-  'Completed',
-]).describe('Possible states for a B3TR proposal')
+// B3TR Proposals Results: GET /api/v2/b3tr/proposals/results
+export const ProposalStateSchema = z
+  .enum([
+    'Pending',
+    'Active',
+    'Canceled',
+    'Defeated',
+    'Succeeded',
+    'Queued',
+    'Executed',
+    'DepositNotMet',
+    'InDevelopment',
+    'Completed',
+  ])
+  .describe('Possible states for a B3TR proposal')
 
-export const ProposalVoteResultSchema = z.object({
-  voters: z.number().int().nonnegative().describe('Number of voters'),
-  totalWeight: NumericString.describe('Total voting weight as a string'),
-  totalPower: NumericString.describe('Total voting power as a string'),
-}).describe('Vote result details for a proposal')
+export const ProposalVoteResultSchema = z
+  .object({
+    voters: z.number().int().nonnegative().describe('Number of voters'),
+    totalWeight: NumericString.describe('Total voting weight as a string'),
+    totalPower: NumericString.describe('Total voting power as a string'),
+  })
+  .describe('Vote result details for a proposal')
 
-export const ProposalResultsSchema = z.object({
-  forResult: ProposalVoteResultSchema.describe('Votes in favor'),
-  againstResult: ProposalVoteResultSchema.describe('Votes against'),
-  abstainResult: ProposalVoteResultSchema.describe('Abstain votes'),
-}).describe('Aggregated voting results for a proposal')
+export const ProposalResultsSchema = z
+  .object({
+    forResult: ProposalVoteResultSchema.describe('Votes in favor'),
+    againstResult: ProposalVoteResultSchema.describe('Votes against'),
+    abstainResult: ProposalVoteResultSchema.describe('Abstain votes'),
+  })
+  .describe('Aggregated voting results for a proposal')
 
-export const IndexerB3TRProposalEntrySchema = z.object({
-  proposalId: NumericString.describe('Unique identifier for the proposal'),
-  createdAtBlockNumber: z.number().int().nonnegative().describe('Block number when proposal was created'),
-  startRoundId: z.number().int().nonnegative().describe('Round ID when proposal voting starts'),
-  state: ProposalStateSchema.describe('Current state of the proposal'),
-  description: z.string().describe('IPFS hash or description of the proposal'),
-  results: ProposalResultsSchema.optional().describe('Voting results (only present if votes have been cast)'),
-}).describe('Details of a B3TR proposal')
+export const IndexerB3TRProposalEntrySchema = z
+  .object({
+    proposalId: NumericString.describe('Unique identifier for the proposal'),
+    createdAtBlockNumber: z.number().int().nonnegative().describe('Block number when proposal was created'),
+    startRoundId: z.number().int().nonnegative().describe('Round ID when proposal voting starts'),
+    state: ProposalStateSchema.describe('Current state of the proposal'),
+    description: z.string().describe('IPFS hash or description of the proposal'),
+    results: ProposalResultsSchema.optional().describe('Voting results (only present if votes have been cast)'),
+  })
+  .describe('Details of a B3TR proposal')
 
-export const IndexerGetB3TRProposalsResultsParamsSchema = z.object({
-  proposalId: NumericString.optional().describe('Optional: Filter by specific proposal ID. When provided, returns only the matching proposal. Use this to query a specific proposal directly instead of fetching all proposals.'),
-  page: z.number().int().nonnegative().optional().describe('Zero-based results page number (default: 0)'),
-  size: z.number().int().positive().optional().describe('Results per page (default: 20)'),
-  direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction (default: DESC)'),
-  states: z.array(ProposalStateSchema).optional().describe('Filter by proposal states (optional)'),
-}).describe('Params for GET /api/v2/b3tr/proposals/results')
+export const IndexerGetB3TRProposalsResultsParamsSchema = z
+  .object({
+    proposalId: NumericString.optional().describe(
+      'Optional: Filter by specific proposal ID. When provided, returns only the matching proposal. Use this to query a specific proposal directly instead of fetching all proposals.',
+    ),
+    page: z.number().int().nonnegative().optional().describe('Zero-based results page number (default: 0)'),
+    size: z.number().int().positive().optional().describe('Results per page (default: 20)'),
+    direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction (default: DESC)'),
+    states: z.array(ProposalStateSchema).optional().describe('Filter by proposal states (optional)'),
+  })
+  .describe('Params for GET /api/v2/b3tr/proposals/results')
 
-export const IndexerB3TRProposalsResultsResponseSchema = indexerResponseSchema(
-  IndexerB3TRProposalEntrySchema,
-).describe('List response for B3TR proposals results')
+export const IndexerB3TRProposalsResultsResponseSchema = indexerResponseSchema(IndexerB3TRProposalEntrySchema).describe(
+  'List response for B3TR proposals results',
+)
 
 // ***************************** Accounts Overview (Thor Accounts) *****************************/
- 
 
 // ***************************** Validators *****************************/
 export const IndexerValidatorStatusSchema = z
@@ -1159,7 +1187,9 @@ export const IndexerValidatorsSortBySchema = z
     'nft:Lightning',
     'nft:Flash',
   ])
-  .describe('Supported sort keys for validators, when sorting by nft:<Level> Yield for next cycle take into account ACTIVE and QUEUED validators')
+  .describe(
+    'Supported sort keys for validators, when sorting by nft:<Level> Yield for next cycle take into account ACTIVE and QUEUED validators',
+  )
 
 export const IndexerValidatorSchema = z
   .object({
@@ -1167,35 +1197,83 @@ export const IndexerValidatorSchema = z
     blockId: ThorBlockIdSchema,
     blockNumber: ThorBlockNumberSchema,
     blockTimestamp: z.number(),
-    endorser: ThorAddressSchema.describe('Validator endorser address, this address is responsible for endorsing the validator'),
+    endorser: ThorAddressSchema.describe(
+      'Validator endorser address, this address is responsible for endorsing the validator',
+    ),
     status: IndexerValidatorStatusSchema,
-    vetStaked: z.number().describe('Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts)'),
+    vetStaked: z
+      .number()
+      .describe(
+        'Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts)',
+      ),
     validatorVetStaked: z.number().describe('VET staked by the validator directly'),
     delegatorVetStaked: z.number().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
-    queuedVetStaked: z.number().describe('Total queued VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    exitingVetStaked: z.number().describe('Total exiting VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
+    queuedVetStaked: z
+      .number()
+      .describe('Total queued VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
+    exitingVetStaked: z
+      .number()
+      .describe('Total exiting VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
     cycleEndBlock: z.number().describe('Block number of the end of the current cycle'),
-    blockProbability: z.number().describe('Probability of the validator being selected to produce a block, based on the validator weight which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2'),
+    blockProbability: z
+      .number()
+      .describe(
+        'Probability of the validator being selected to produce a block, based on the validator weight which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2',
+      ),
     blocksPerEpoch: z.number().describe('Number of blocks per epoch'),
-    totalTvl: z.number().describe('Total value locked (USD) of the validator (endorsers TVL + TVL from delegations from stargate nfts)'),
+    totalTvl: z
+      .number()
+      .describe('Total value locked (USD) of the validator (endorsers TVL + TVL from delegations from stargate nfts)'),
     validatorTvl: z.number().describe('Value locked (USD) of the validator directly'),
     delegatorTvl: z.number().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
-    tvlBasedYield: z.number().describe('Yield of the validator based on the value locked (USD) of the validator and the delegators (Stargate NFTs), yield is effected by block probability of the validator'),
+    tvlBasedYield: z
+      .number()
+      .describe(
+        'Yield of the validator based on the value locked (USD) of the validator and the delegators (Stargate NFTs), yield is effected by block probability of the validator',
+      ),
     nftYieldsNextCycle: z
       .object({
-        Strength: z.number().optional().describe('Projected next-cycle percentage yield for the Strength Stargate NFT level'),
-        Thunder: z.number().optional().describe('Projected next-cycle percentage yield for the Thunder Stargate NFT level'),
-        Mjolnir: z.number().optional().describe('Projected next-cycle percentage yield for the Mjolnir Stargate NFT level'),
-        VeThorX: z.number().optional().describe('Projected next-cycle percentage yield for the VeThorX Stargate NFT level'),
-        StrengthX: z.number().optional().describe('Projected next-cycle percentage yield for the StrengthX Stargate NFT level'),
-        ThunderX: z.number().optional().describe('Projected next-cycle percentage yield for the ThunderX Stargate NFT level'),
-        MjolnirX: z.number().optional().describe('Projected next-cycle percentage yield for the MjolnirX Stargate NFT level'),
+        Strength: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the Strength Stargate NFT level'),
+        Thunder: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the Thunder Stargate NFT level'),
+        Mjolnir: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the Mjolnir Stargate NFT level'),
+        VeThorX: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the VeThorX Stargate NFT level'),
+        StrengthX: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the StrengthX Stargate NFT level'),
+        ThunderX: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the ThunderX Stargate NFT level'),
+        MjolnirX: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the MjolnirX Stargate NFT level'),
         Dawn: z.number().optional().describe('Projected next-cycle percentage yield for the Dawn Stargate NFT level'),
-        Lightning: z.number().optional().describe('Projected next-cycle percentage yield for the Lightning Stargate NFT level'),
+        Lightning: z
+          .number()
+          .optional()
+          .describe('Projected next-cycle percentage yield for the Lightning Stargate NFT level'),
         Flash: z.number().optional().describe('Projected next-cycle percentage yield for the Flash Stargate NFT level'),
       })
       .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
-    totalWeight: z.number().describe('Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2'),
+    totalWeight: z
+      .number()
+      .describe(
+        'Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2',
+      ),
     online: z.boolean().describe('Whether the validator is online'),
     completedPeriods: z.number().describe('Number of completed periods of the validator'),
     startBlock: z.number().describe('Block number of the start of the current cycle'),
@@ -1217,9 +1295,8 @@ export const IndexerGetValidatorsParamsSchema = z
   .extend(paginationParamsSchema.shape)
   .describe('Params for GET /api/v1/validators')
 
-export const IndexerValidatorsResponseSchema = indexerResponseSchema(IndexerValidatorSchema).describe(
-  'List response for validators',
-)
+export const IndexerValidatorsResponseSchema =
+  indexerResponseSchema(IndexerValidatorSchema).describe('List response for validators')
 
 // ***************************** Validator Delegations *****************************/
 export const IndexerDelegationStatusSchema = z
@@ -1269,9 +1346,9 @@ export const IndexerGetValidatorDelegationsParamsSchema = z
   .extend(paginationParamsSchema.shape)
   .describe('Params for GET /api/v1/validators/delegations')
 
-export const IndexerValidatorDelegationsResponseSchema = indexerResponseSchema(
-  IndexerDelegationSchema,
-).describe('List response for validator delegations')
+export const IndexerValidatorDelegationsResponseSchema = indexerResponseSchema(IndexerDelegationSchema).describe(
+  'List response for validator delegations',
+)
 
 // ***************************** Validator block rewards *****************************/
 export const IndexerValidatorBlockStatusSchema = z
@@ -1293,9 +1370,7 @@ export const IndexerValidatorBlockRewardSchema = z
       .describe(
         'Portion of total distributed to delegators (Stargate NFTs). Typically 70% when delegations are present.',
       ),
-    validatorRewards: z
-      .string()
-      .describe('Portion of total retained by the validator after delegator share.'),
+    validatorRewards: z.string().describe('Portion of total retained by the validator after delegator share.'),
   })
   .describe('Per-block reward breakdown for a validator')
 
@@ -1328,25 +1403,29 @@ export const IndexerValidatorMissedPercentageSchema = z
 // B3TR Proposal Comments: GET /api/v1/b3tr/proposals/{proposalId}/comments
 export const ProposalSupportSchema = z.enum(['FOR', 'AGAINST', 'ABSTAIN']).describe('Vote support type')
 
-export const IndexerB3TRProposalCommentSchema = z.object({
-blockNumber: z.number().int().nonnegative().describe('Block number when the comment was made'),
-blockTimestamp: z.number().int().nonnegative().describe('Unix timestamp when the comment was made'),
-voter: ThorAddressSchema.describe('Address of the voter who made the comment'),
-proposalId: NumericString.describe('Proposal ID this comment is for'),
-support: ProposalSupportSchema.describe('Vote type (FOR, AGAINST, or ABSTAIN)'),
-weight: NumericString.describe('Voting weight as a string'),
-power: NumericString.describe('Voting power as a string'),
-reason: z.string().describe('The comment/reason text provided by the voter'),
-}).describe('A comment on a B3TR proposal')
+export const IndexerB3TRProposalCommentSchema = z
+  .object({
+    blockNumber: z.number().int().nonnegative().describe('Block number when the comment was made'),
+    blockTimestamp: z.number().int().nonnegative().describe('Unix timestamp when the comment was made'),
+    voter: ThorAddressSchema.describe('Address of the voter who made the comment'),
+    proposalId: NumericString.describe('Proposal ID this comment is for'),
+    support: ProposalSupportSchema.describe('Vote type (FOR, AGAINST, or ABSTAIN)'),
+    weight: NumericString.describe('Voting weight as a string'),
+    power: NumericString.describe('Voting power as a string'),
+    reason: z.string().describe('The comment/reason text provided by the voter'),
+  })
+  .describe('A comment on a B3TR proposal')
 
-export const IndexerGetB3TRProposalCommentsParamsSchema = z.object({
-proposalId: NumericString.describe('Proposal ID to fetch comments for'),
-support: ProposalSupportSchema.optional().describe('Filter by support type (FOR, AGAINST, or ABSTAIN)'),
-page: z.number().int().nonnegative().optional().describe('Zero-based results page number (default: 0)'),
-size: z.number().int().positive().optional().describe('Results per page (default: 20)'),
-direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction (default: DESC)'),
-}).describe('Params for GET /api/v1/b3tr/proposals/{proposalId}/comments')
+export const IndexerGetB3TRProposalCommentsParamsSchema = z
+  .object({
+    proposalId: NumericString.describe('Proposal ID to fetch comments for'),
+    support: ProposalSupportSchema.optional().describe('Filter by support type (FOR, AGAINST, or ABSTAIN)'),
+    page: z.number().int().nonnegative().optional().describe('Zero-based results page number (default: 0)'),
+    size: z.number().int().positive().optional().describe('Results per page (default: 20)'),
+    direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction (default: DESC)'),
+  })
+  .describe('Params for GET /api/v1/b3tr/proposals/{proposalId}/comments')
 
 export const IndexerB3TRProposalCommentsResponseSchema = indexerResponseSchema(
-IndexerB3TRProposalCommentSchema,
+  IndexerB3TRProposalCommentSchema,
 ).describe('List response for B3TR proposal comments')
