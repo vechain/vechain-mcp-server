@@ -17,7 +17,7 @@ on:
         description: 'Environment name (dev/prod) for AWS credentials'
         required: false
         type: string
-        default: ''
+        default: 'dev'
   workflow_dispatch:
 
 permissions:
