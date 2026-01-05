@@ -26,7 +26,7 @@ export const getAppHubApps: MCPTool = {
   name: 'getAppHubApps',
   title: 'App Hub: official apps on VeChain',
   description:
-    'List official apps from VeChain App Hub. Supports filtering by category, tag, VeWorld support and free-text search.',
+    'List official apps from VeChain App Hub. Supports filtering by category, tag, VeWorld support and free-text search. Always return app URL when available.',
   inputSchema: InputSchema.shape,
   outputSchema: OutputSchema.shape,
   annotations: {
