@@ -687,25 +687,25 @@ export const IndexerGetStargateTotalVetStakedParamsSchema = z
 
 export const IndexerStargateVetStakedByLevelSchema = z
   .object({
-    Strength: z.coerce.number(),
-    Thunder: z.coerce.number(),
-    Mjolnir: z.coerce.number(),
-    VeThorX: z.coerce.number(),
-    StrengthX: z.coerce.number(),
-    ThunderX: z.coerce.number(),
-    MjolnirX: z.coerce.number(),
-    Dawn: z.coerce.number(),
-    Lightning: z.coerce.number(),
-    Flash: z.coerce.number(),
+    Strength: NumericString.describe('VET staked at Strength level (wei, as string)'),
+    Thunder: NumericString.describe('VET staked at Thunder level (wei, as string)'),
+    Mjolnir: NumericString.describe('VET staked at Mjolnir level (wei, as string)'),
+    VeThorX: NumericString.describe('VET staked at VeThorX level (wei, as string)'),
+    StrengthX: NumericString.describe('VET staked at StrengthX level (wei, as string)'),
+    ThunderX: NumericString.describe('VET staked at ThunderX level (wei, as string)'),
+    MjolnirX: NumericString.describe('VET staked at MjolnirX level (wei, as string)'),
+    Dawn: NumericString.describe('VET staked at Dawn level (wei, as string)'),
+    Lightning: NumericString.describe('VET staked at Lightning level (wei, as string)'),
+    Flash: NumericString.describe('VET staked at Flash level (wei, as string)'),
   })
-  .describe('Breakdown of total VET staked by Stargate NFT level')
+  .describe('Breakdown of total VET staked by Stargate NFT level (values are numeric strings to preserve BigInteger precision)')
 
 export const IndexerStargateTotalVetStakedSchema = z
   .object({
     blockId: ThorBlockIdSchema,
     blockNumber: ThorBlockNumberSchema,
     blockTimestamp: z.number(),
-    total: z.coerce.number(),
+    total: NumericString.describe('Total VET staked across all levels (wei, as string)'),
     byLevel: IndexerStargateVetStakedByLevelSchema,
     totalNftCount: z.number().optional(),
     nftCountByLevel: IndexerStargateNftHoldersByLevelSchema.optional(),
@@ -1222,47 +1222,53 @@ export const IndexerValidatorSchema = z
     ),
     beneficiary: ThorAddressSchema.nullable().optional().describe('Beneficiary address for rewards'),
     status: IndexerValidatorStatusSchema,
-    vetStaked: z.coerce
+    vetStaked: z
       .number()
+      .finite()
       .describe(
-        'Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts)',
+        'Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts). Note: large values may lose precision in JS.',
       ),
-    validatorVetStaked: z.coerce.number().describe('VET staked by the validator directly'),
-    delegatorVetStaked: z.coerce.number().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
-    queuedVetStaked: z.coerce
+    validatorVetStaked: z.number().finite().describe('VET staked by the validator directly'),
+    delegatorVetStaked: z.number().finite().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
+    queuedVetStaked: z
       .number()
+      .finite()
       .describe('Total queued VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    validatorQueuedVetStaked: z.coerce.number().optional().describe('Queued VET staked by the validator directly'),
-    delegatorQueuedVetStaked: z.coerce.number().optional().describe('Queued VET staked by delegators'),
-    exitingVetStaked: z.coerce
+    validatorQueuedVetStaked: z.number().finite().optional().describe('Queued VET staked by the validator directly'),
+    delegatorQueuedVetStaked: z.number().finite().optional().describe('Queued VET staked by delegators'),
+    exitingVetStaked: z
       .number()
+      .finite()
       .describe('Total exiting VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    validatorExitingVetStaked: z.coerce.number().optional().describe('Exiting VET staked by the validator directly'),
-    delegatorExitingVetStaked: z.coerce.number().optional().describe('Exiting VET staked by delegators'),
+    validatorExitingVetStaked: z.number().finite().optional().describe('Exiting VET staked by the validator directly'),
+    delegatorExitingVetStaked: z.number().finite().optional().describe('Exiting VET staked by delegators'),
     cycleEndBlock: z.number().describe('Block number of the end of the current cycle'),
-    blockProbability: z.coerce
+    blockProbability: z
       .number()
+      .finite()
       .describe(
         'Probability of the validator being selected to produce a block, based on the validator weight which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2',
       ),
     blocksPerEpoch: z.number().describe('Number of blocks per epoch'),
-    totalTvl: z.coerce
+    totalTvl: z
       .number()
+      .finite()
       .describe('Total value locked (USD) of the validator (endorsers TVL + TVL from delegations from stargate nfts)'),
-    validatorTvl: z.coerce.number().describe('Value locked (USD) of the validator directly'),
-    delegatorTvl: z.coerce.number().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
-    totalRewards: z.coerce.number().optional().describe('Total VTHO rewards earned by the validator'),
-    tvlBasedYield: z.coerce
+    validatorTvl: z.number().finite().describe('Value locked (USD) of the validator directly'),
+    delegatorTvl: z.number().finite().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
+    totalRewards: z.number().finite().optional().describe('Total VTHO rewards earned by the validator'),
+    tvlBasedYield: z
       .number()
+      .finite()
       .describe(
         'Yield of the validator based on the value locked (USD) of the validator and the delegators (Stargate NFTs), yield is effected by block probability of the validator',
       ),
-    validatorTvlPercentage: z.coerce.number().optional().describe('Percentage of total TVL held by the validator'),
-    validatorYield: z.coerce.number().optional().describe('Yield for the validator'),
-    avgDelegatorYield: z.coerce.number().optional().describe('Average yield for delegators'),
-    nextCycleTvlBasedYield: z.coerce.number().optional().describe('Projected TVL-based yield for next cycle'),
-    nextCycleValidatorYield: z.coerce.number().optional().describe('Projected validator yield for next cycle'),
-    nextCycleAvgDelegatorYield: z.coerce.number().optional().describe('Projected average delegator yield for next cycle'),
+    validatorTvlPercentage: z.number().finite().optional().describe('Percentage of total TVL held by the validator'),
+    validatorYield: z.number().finite().optional().describe('Yield for the validator'),
+    avgDelegatorYield: z.number().finite().optional().describe('Average yield for delegators'),
+    nextCycleTvlBasedYield: z.number().finite().optional().describe('Projected TVL-based yield for next cycle'),
+    nextCycleValidatorYield: z.number().finite().optional().describe('Projected validator yield for next cycle'),
+    nextCycleAvgDelegatorYield: z.number().finite().optional().describe('Projected average delegator yield for next cycle'),
     nftYieldsNextCycle: z
       .object({
         Strength: z
@@ -1301,10 +1307,11 @@ export const IndexerValidatorSchema = z
         Flash: z.number().optional().describe('Projected next-cycle percentage yield for the Flash Stargate NFT level'),
       })
       .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
-    totalWeight: z.coerce
+    totalWeight: z
       .number()
+      .finite()
       .describe(
-        'Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2',
+        'Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2. Note: large values may lose precision in JS.',
       ),
     online: z.boolean().describe('Whether the validator is online'),
     completedPeriods: z.number().describe('Number of completed periods of the validator'),
