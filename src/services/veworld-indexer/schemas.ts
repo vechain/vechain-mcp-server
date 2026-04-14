@@ -163,7 +163,6 @@ export const IndexedHistoryEventSchema = z.object({
   outputToken: z.string().optional(),
   inputValue: z.string().optional(),
   outputValue: z.string().optional(),
-  tokenAddress: ThorAddressSchema.optional(),
   levelId: z.string().optional(),
   owner: ThorAddressSchema.optional(),
   vetGeneratedVthoRewards: z.string().optional(),
@@ -571,7 +570,9 @@ export const IndexerGetStargateTokenRewardsParamsSchema = z
     tokenId: z
       .string()
       .regex(/^[0-9]+$/, 'tokenId must be a numeric string')
-      .describe('The tokenId to query for rewards'),
+      .describe(
+        'The numeric Stargate NFT token ID (e.g. "12345"), NOT the level name. Use getStargateTokens to find token IDs for a given owner.',
+      ),
     validator: ThorAddressSchema.optional().describe('Optional validator address filter'),
     periodType: IndexerStargateRewardPeriodSchema.describe(
       'Reward period to aggregate by (CYCLE, DAY, WEEK, MONTH, YEAR, ALL)',
@@ -686,16 +687,16 @@ export const IndexerGetStargateTotalVetStakedParamsSchema = z
 
 export const IndexerStargateVetStakedByLevelSchema = z
   .object({
-    Strength: z.number(),
-    Thunder: z.number(),
-    Mjolnir: z.number(),
-    VeThorX: z.number(),
-    StrengthX: z.number(),
-    ThunderX: z.number(),
-    MjolnirX: z.number(),
-    Dawn: z.number(),
-    Lightning: z.number(),
-    Flash: z.number(),
+    Strength: z.coerce.number(),
+    Thunder: z.coerce.number(),
+    Mjolnir: z.coerce.number(),
+    VeThorX: z.coerce.number(),
+    StrengthX: z.coerce.number(),
+    ThunderX: z.coerce.number(),
+    MjolnirX: z.coerce.number(),
+    Dawn: z.coerce.number(),
+    Lightning: z.coerce.number(),
+    Flash: z.coerce.number(),
   })
   .describe('Breakdown of total VET staked by Stargate NFT level')
 
@@ -704,8 +705,10 @@ export const IndexerStargateTotalVetStakedSchema = z
     blockId: ThorBlockIdSchema,
     blockNumber: ThorBlockNumberSchema,
     blockTimestamp: z.number(),
-    total: z.number(),
+    total: z.coerce.number(),
     byLevel: IndexerStargateVetStakedByLevelSchema,
+    totalNftCount: z.number().optional(),
+    nftCountByLevel: IndexerStargateNftHoldersByLevelSchema.optional(),
   })
   .describe('Total VET staked in Stargate with block metadata and per-level breakdown')
 
@@ -718,18 +721,19 @@ export const VevoteHistoricProposalSchema = z
       'Legacy smart contract address, there are two main contracts for governance: 0xa6416a72f816d3a69f33d0814700545c8e3fe4be (Stakeholder Governance) and 0x7e54f0790153647ec0651c35ced28171adb5d44a (Steering Committee Governance)',
     ),
     createdDate: z.string().optional().describe('Date the proposal was created'),
-    proposer: ThorAddressSchema.describe('Address of the proposer'),
-    title: z.string().describe('Title of the proposal'),
-    description: z.string().describe('Description of the proposal'),
-    choices: z.array(z.string()).describe('Choices for the proposal'),
-    createTime: z.number().describe('Unix timestamp when the proposal was created'),
-    votingStartTime: z.number().describe('Unix timestamp when voting starts'),
-    votingEndTime: z.number().describe('Unix timestamp when voting ends'),
-    voteTallies: z.array(z.number()).describe('Per-choice vote tallies'),
-    totalVotes: z.number().describe('Total number of votes cast'),
-    blockId: ThorBlockIdSchema.describe('Block id of creation'),
-    blockNumber: ThorBlockNumberSchema.describe('Block number of creation'),
-    blockTimestamp: z.number().describe('Block timestamp (Unix seconds) of creation'),
+    proposalType: z.number().optional().describe('Type of the proposal'),
+    proposer: ThorAddressSchema.nullable().optional().describe('Address of the proposer'),
+    title: z.string().nullable().optional().describe('Title of the proposal'),
+    description: z.string().nullable().optional().describe('Description of the proposal'),
+    choices: z.array(z.string()).nullable().optional().describe('Choices for the proposal'),
+    createTime: z.number().nullable().optional().describe('Unix timestamp when the proposal was created'),
+    votingStartTime: z.number().nullable().optional().describe('Unix timestamp when voting starts'),
+    votingEndTime: z.number().nullable().optional().describe('Unix timestamp when voting ends'),
+    voteTallies: z.array(z.number()).nullable().optional().describe('Per-choice vote tallies'),
+    totalVotes: z.number().nullable().optional().describe('Total number of votes cast'),
+    blockId: ThorBlockIdSchema.optional().describe('Block id of creation'),
+    blockNumber: ThorBlockNumberSchema.optional().describe('Block number of creation'),
+    blockTimestamp: z.number().optional().describe('Block timestamp (Unix seconds) of creation'),
   })
   .passthrough()
   .describe('Legacy VeVote/ VeChain governance historic proposal entry')
@@ -869,6 +873,8 @@ export const IndexerGetB3TRUserOverviewParamsSchema = z
 export const IndexerB3TRUserOverviewSchema = z
   .object({
     wallet: ThorAddressSchema,
+    roundId: z.number().optional().describe('Round id if filtered by round'),
+    date: z.string().optional().describe('Date if filtered by date (yyyy-MM-dd)'),
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe(
@@ -928,6 +934,8 @@ export const IndexerGetB3TRAppOverviewParamsSchema = z
 export const IndexerB3TRAppOverviewSchema = z
   .object({
     appId: z.string(),
+    roundId: z.number().optional().describe('Round id if filtered by round'),
+    date: z.string().optional().describe('Date if filtered by date (yyyy-MM-dd)'),
     totalRewardAmount: z.number().describe('Total B3TR rewards on this app'),
     actionsRewarded: z.number().describe('Total number of rewarded actions on this app'),
     totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals on this app'),
@@ -955,6 +963,8 @@ export const IndexerB3TRUserAppOverviewSchema = z
   .object({
     wallet: ThorAddressSchema,
     appId: z.string(),
+    roundId: z.number().optional().describe('Round id if filtered by round'),
+    date: z.string().optional().describe('Date if filtered by date (yyyy-MM-dd)'),
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for the user on this app'),
@@ -977,6 +987,8 @@ export const IndexerGetB3TRGlobalOverviewParamsSchema = z
 
 export const IndexerB3TRGlobalOverviewSchema = z
   .object({
+    roundId: z.number().optional().describe('Round id if filtered by round'),
+    date: z.string().optional().describe('Date if filtered by date (yyyy-MM-dd)'),
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe(
@@ -1009,6 +1021,8 @@ export const IndexerGetB3TRUsersLeaderboardParamsSchema = z
 export const IndexerB3TRUserLeaderboardEntrySchema = z
   .object({
     wallet: ThorAddressSchema,
+    roundId: z.number().optional().describe('Round id if filtered by round'),
+    date: z.string().optional().describe('Date if filtered by date (yyyy-MM-dd)'),
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this user'),
@@ -1039,6 +1053,8 @@ export const IndexerGetB3TRAppsLeaderboardParamsSchema = z
 export const IndexerB3TRAppLeaderboardEntrySchema = z
   .object({
     appId: z.string(),
+    roundId: z.number().optional().describe('Round id if filtered by round'),
+    date: z.string().optional().describe('Date if filtered by date (yyyy-MM-dd)'),
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this app'),
@@ -1070,6 +1086,8 @@ export const IndexerB3TRAppUserLeaderboardEntrySchema = z
   .object({
     appId: z.string(),
     user: ThorAddressSchema,
+    roundId: z.number().optional().describe('Round id if filtered by round'),
+    date: z.string().optional().describe('Date if filtered by date (yyyy-MM-dd)'),
     totalRewardAmount: z.number(),
     actionsRewarded: z.number(),
     totalImpact: ImpactSchema.optional().describe('Aggregated sustainability impact totals for this user on the app'),
@@ -1195,43 +1213,56 @@ export const IndexerValidatorsSortBySchema = z
 export const IndexerValidatorSchema = z
   .object({
     id: z.string().describe('Validator ID (address-like)'),
-    blockId: ThorBlockIdSchema,
-    blockNumber: ThorBlockNumberSchema,
-    blockTimestamp: z.number(),
+    // blockId/blockNumber/blockTimestamp are @JsonIgnore in the indexer — not returned
+    blockId: ThorBlockIdSchema.optional(),
+    blockNumber: ThorBlockNumberSchema.optional(),
+    blockTimestamp: z.number().optional(),
     endorser: ThorAddressSchema.describe(
       'Validator endorser address, this address is responsible for endorsing the validator',
     ),
+    beneficiary: ThorAddressSchema.nullable().optional().describe('Beneficiary address for rewards'),
     status: IndexerValidatorStatusSchema,
-    vetStaked: z
+    vetStaked: z.coerce
       .number()
       .describe(
         'Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts)',
       ),
-    validatorVetStaked: z.number().describe('VET staked by the validator directly'),
-    delegatorVetStaked: z.number().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
-    queuedVetStaked: z
+    validatorVetStaked: z.coerce.number().describe('VET staked by the validator directly'),
+    delegatorVetStaked: z.coerce.number().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
+    queuedVetStaked: z.coerce
       .number()
       .describe('Total queued VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    exitingVetStaked: z
+    validatorQueuedVetStaked: z.coerce.number().optional().describe('Queued VET staked by the validator directly'),
+    delegatorQueuedVetStaked: z.coerce.number().optional().describe('Queued VET staked by delegators'),
+    exitingVetStaked: z.coerce
       .number()
       .describe('Total exiting VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
+    validatorExitingVetStaked: z.coerce.number().optional().describe('Exiting VET staked by the validator directly'),
+    delegatorExitingVetStaked: z.coerce.number().optional().describe('Exiting VET staked by delegators'),
     cycleEndBlock: z.number().describe('Block number of the end of the current cycle'),
-    blockProbability: z
+    blockProbability: z.coerce
       .number()
       .describe(
         'Probability of the validator being selected to produce a block, based on the validator weight which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2',
       ),
     blocksPerEpoch: z.number().describe('Number of blocks per epoch'),
-    totalTvl: z
+    totalTvl: z.coerce
       .number()
       .describe('Total value locked (USD) of the validator (endorsers TVL + TVL from delegations from stargate nfts)'),
-    validatorTvl: z.number().describe('Value locked (USD) of the validator directly'),
-    delegatorTvl: z.number().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
-    tvlBasedYield: z
+    validatorTvl: z.coerce.number().describe('Value locked (USD) of the validator directly'),
+    delegatorTvl: z.coerce.number().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
+    totalRewards: z.coerce.number().optional().describe('Total VTHO rewards earned by the validator'),
+    tvlBasedYield: z.coerce
       .number()
       .describe(
         'Yield of the validator based on the value locked (USD) of the validator and the delegators (Stargate NFTs), yield is effected by block probability of the validator',
       ),
+    validatorTvlPercentage: z.coerce.number().optional().describe('Percentage of total TVL held by the validator'),
+    validatorYield: z.coerce.number().optional().describe('Yield for the validator'),
+    avgDelegatorYield: z.coerce.number().optional().describe('Average yield for delegators'),
+    nextCycleTvlBasedYield: z.coerce.number().optional().describe('Projected TVL-based yield for next cycle'),
+    nextCycleValidatorYield: z.coerce.number().optional().describe('Projected validator yield for next cycle'),
+    nextCycleAvgDelegatorYield: z.coerce.number().optional().describe('Projected average delegator yield for next cycle'),
     nftYieldsNextCycle: z
       .object({
         Strength: z
@@ -1270,7 +1301,7 @@ export const IndexerValidatorSchema = z
         Flash: z.number().optional().describe('Projected next-cycle percentage yield for the Flash Stargate NFT level'),
       })
       .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
-    totalWeight: z
+    totalWeight: z.coerce
       .number()
       .describe(
         'Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2',
@@ -1282,6 +1313,9 @@ export const IndexerValidatorSchema = z
     blocksPerYear: z.number().describe('Number of blocks per year'),
     percentageOffline: z.number().describe('Percentage of time the validator has been offline'),
     offlineBlocks: z.number().describe('Number of blocks the validator has been offline'),
+    exitBlock: z.number().optional().describe('Block number when exit was requested'),
+    queuePosition: z.number().optional().describe('Position in the activation queue'),
+    availableStartBlock: z.number().optional().describe('Block number when the validator becomes available'),
   })
   .passthrough()
   .describe('Validator stats entry as returned by /api/v1/validators')
@@ -1376,6 +1410,8 @@ export const IndexerValidatorBlockRewardSchema = z
       .string()
       .optional()
       .describe('Portion of total retained by the validator after delegator share.'),
+    blocksOffline: z.number().optional().describe('Number of blocks the validator was offline in this period'),
+    onlineBlock: z.number().optional().describe('Block number when the validator came online'),
   })
   .describe('Per-block reward breakdown for a validator')
 

@@ -136,7 +136,10 @@ export const getHistoryOfAccount: MCPTool = {
       })
 
       if (!response?.data) {
-        return indexerErrorResponse('Failed to fetch history from VeWorld Indexer')
+        return indexerErrorResponse(
+          `Failed to fetch history for ${validatedAddress} from VeWorld Indexer. ` +
+            'The address may not have any history, or the indexer returned an unexpected response.',
+        )
       }
 
       const history = response.data
