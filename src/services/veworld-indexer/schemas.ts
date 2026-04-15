@@ -83,8 +83,8 @@ export const IndexerGetHistoryParamsSchema = z
       .optional()
       .describe('Optional filter by search by (to, from, origin, gasPayer)'),
     contractAddress: ThorAddressSchema.nullable().optional().describe('Optional filter by contract address'),
-    after: UnixTimestamp.nullable().optional().describe('Optional filter by after timestamp (unix timestamp)'),
-    before: UnixTimestamp.nullable().optional().describe('Optional filter by before timestamp (unix timestamp)'),
+    after: UnixTimestamp.nullable().optional().describe('Optional filter by after timestamp (Unix seconds, e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
+    before: UnixTimestamp.nullable().optional().describe('Optional filter by before timestamp (Unix seconds, e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
   })
   .extend(paginationParamsSchema.shape)
 
@@ -832,8 +832,8 @@ export const IndexerB3TRActionSchema = z
 export const IndexerGetB3TRActionsForAppParamsSchema = z
   .object({
     appId: z.string().describe('veBetterDaoId of the app'),
-    after: z.number().optional().describe('Return actions after (inclusive) this timestamp in milliseconds'),
-    before: z.number().optional().describe('Return actions before (inclusive) this timestamp in milliseconds'),
+    after: z.number().int().nonnegative().optional().describe('Return actions after (inclusive) this Unix timestamp in seconds (e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
+    before: z.number().int().nonnegative().optional().describe('Return actions before (inclusive) this Unix timestamp in seconds (e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
     page: z.number().optional(),
     size: z.number().optional(),
     direction: z.enum(['ASC', 'DESC']).optional(),
@@ -849,8 +849,8 @@ export const IndexerGetB3TRActionsForUserParamsSchema = z
   .object({
     wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
     appId: z.string().optional().describe('Optional app ID to filter interactions'),
-    after: z.number().optional().describe('Return records after this time (Unix time in milliseconds)'),
-    before: z.number().optional().describe('Return records before this time (Unix time in milliseconds)'),
+    after: z.number().int().nonnegative().optional().describe('Return records after this Unix timestamp in seconds (e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
+    before: z.number().int().nonnegative().optional().describe('Return records before this Unix timestamp in seconds (e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
     page: z.number().optional().describe('Zero-based page number'),
     size: z.number().optional().describe('Page size'),
     direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction'),

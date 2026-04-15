@@ -104,7 +104,7 @@ export const getHistoryOfAccount: MCPTool = {
   - eventName: Single string OR array (ALWAYS prefer arrays for related events)
   - searchBy: 'to' | 'from' | 'origin' | 'gasPayer' - filter by address role
   - contractAddress: Filter by specific contract interactions
-  - after/before: Unix timestamps (seconds) for time range
+  - after/before: Unix timestamps in SECONDS (NOT milliseconds). Example: 2025-08-03 00:00 UTC = 1754179200, 2025-08-04 00:00 UTC = 1754265600
   - Pagination: page, size, cursor, direction (ASC/DESC)
   
   Returns paginated array of events with full transaction details.`,
