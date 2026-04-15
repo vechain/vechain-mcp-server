@@ -1,29 +1,32 @@
 /**
  * Unit tests for IndexerValidatorSchema.
  *
- * The veworld indexer serializes:
- * - VET/VTHO on-chain amounts (BigInteger wei) as numeric strings
- * - Computed floating-point values (USD TVL, yield %, probabilities) as JSON numbers
+ * The veworld indexer returns validator VET/TVL amounts as JSON numbers
+ * (not strings). Unlike Stargate BigInteger fields (which are string-serialized),
+ * validator metrics are computed/scaled values returned as IEEE-754 doubles.
  *
- * These tests document and enforce the correct types so schema drift is caught
- * immediately rather than at runtime against the live API.
+ * .finite() guards are applied to float fields to reject Infinity/NaN that could
+ * result from arithmetic overflow or missing values.
+ *
+ * These tests confirm the correct types so schema drift is caught immediately
+ * rather than at runtime against the live API.
  */
 
 import { IndexerValidatorSchema } from '@/services/veworld-indexer/schemas'
 
-/** Minimal valid validator payload from the indexer */
+/** Minimal valid validator payload as returned by the live indexer */
 const BASE_VALIDATOR = {
   id: '0x311E811cd3fC29Ba17D45B04c882245FA69DC776',
   endorser: '0x311E811cd3fC29Ba17D45B04c882245FA69DC776',
   status: 'ACTIVE',
-  // VET amounts as numeric strings (BigInteger wei precision)
-  vetStaked: '25000000000000000000000000',       // 25 M VET in wei
-  validatorVetStaked: '25000000000000000000000000',
-  delegatorVetStaked: '0',
-  queuedVetStaked: '0',
-  exitingVetStaked: '0',
-  totalWeight: '50000000000000000000000000',     // 2× because delegations exist
-  // Computed floats (JSON numbers)
+  // VET staked amounts — returned as JSON numbers (not strings) by the indexer
+  vetStaked: 25000000,
+  validatorVetStaked: 25000000,
+  delegatorVetStaked: 0,
+  queuedVetStaked: 0,
+  exitingVetStaked: 0,
+  totalWeight: 50000000,
+  // Computed floats
   blockProbability: 0.042,
   blocksPerEpoch: 100,
   cycleEndBlock: 22000000,
@@ -53,78 +56,108 @@ const BASE_VALIDATOR = {
   },
 }
 
-describe('IndexerValidatorSchema — VET amount fields accept numeric strings', () => {
+describe('IndexerValidatorSchema — VET staked fields accept JSON numbers', () => {
   test('parses a fully valid validator payload', () => {
     expect(() => IndexerValidatorSchema.parse(BASE_VALIDATOR)).not.toThrow()
   })
 
-  test('vetStaked must be a numeric string, not a number', () => {
-    const withNumber = { ...BASE_VALIDATOR, vetStaked: 25000000 }
-    expect(() => IndexerValidatorSchema.parse(withNumber)).toThrow()
+  test('vetStaked accepts a JSON number', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, vetStaked: 25000000 })).not.toThrow()
   })
 
-  test('validatorVetStaked must be a numeric string', () => {
-    const bad = { ...BASE_VALIDATOR, validatorVetStaked: 25000000 }
+  test('vetStaked rejects a string (the API does NOT return strings for this field)', () => {
+    const bad = { ...BASE_VALIDATOR, vetStaked: '25000000' }
     expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
   })
 
-  test('delegatorVetStaked must be a numeric string', () => {
-    const bad = { ...BASE_VALIDATOR, delegatorVetStaked: 0 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('validatorVetStaked accepts a JSON number', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, validatorVetStaked: 25000000 }),
+    ).not.toThrow()
   })
 
-  test('queuedVetStaked must be a numeric string', () => {
-    const bad = { ...BASE_VALIDATOR, queuedVetStaked: 0 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('validatorVetStaked rejects a string', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, validatorVetStaked: '25000000' }),
+    ).toThrow()
   })
 
-  test('exitingVetStaked must be a numeric string', () => {
-    const bad = { ...BASE_VALIDATOR, exitingVetStaked: 0 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('delegatorVetStaked accepts zero as a number', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, delegatorVetStaked: 0 })).not.toThrow()
   })
 
-  test('totalWeight must be a numeric string', () => {
-    const bad = { ...BASE_VALIDATOR, totalWeight: 50000000 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('queuedVetStaked accepts a JSON number', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, queuedVetStaked: 0 })).not.toThrow()
   })
 
-  test('vetStaked rejects non-numeric strings', () => {
-    const bad = { ...BASE_VALIDATOR, vetStaked: 'twenty-five million' }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('exitingVetStaked accepts a JSON number', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, exitingVetStaked: 0 })).not.toThrow()
   })
 
-  test('vetStaked rejects decimal strings', () => {
-    // Decimal strings are not valid BigInteger representation
-    const bad = { ...BASE_VALIDATOR, vetStaked: '25000000.5' }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('totalWeight accepts a JSON number', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalWeight: 50000000 })).not.toThrow()
+  })
+
+  test('totalWeight rejects a string', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalWeight: '50000000' }),
+    ).toThrow()
   })
 })
 
-describe('IndexerValidatorSchema — optional VET amount fields', () => {
+describe('IndexerValidatorSchema — finite() guards on VET and float fields', () => {
+  test('vetStaked rejects Infinity', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, vetStaked: Infinity })).toThrow()
+  })
+
+  test('vetStaked rejects NaN', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, vetStaked: NaN })).toThrow()
+  })
+
+  test('totalWeight rejects Infinity', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalWeight: Infinity })).toThrow()
+  })
+
+  test('blockProbability rejects Infinity (non-finite)', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, blockProbability: Infinity }),
+    ).toThrow()
+  })
+
+  test('tvlBasedYield rejects NaN (non-finite)', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, tvlBasedYield: NaN }),
+    ).toThrow()
+  })
+
+  test('totalTvl rejects Infinity', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalTvl: Infinity })).toThrow()
+  })
+})
+
+describe('IndexerValidatorSchema — optional VET staked fields', () => {
   test('validatorQueuedVetStaked is optional', () => {
     const noQueued = { ...BASE_VALIDATOR }
     delete (noQueued as any).validatorQueuedVetStaked
     expect(() => IndexerValidatorSchema.parse(noQueued)).not.toThrow()
   })
 
-  test('validatorQueuedVetStaked must be numeric string when present', () => {
-    const bad = { ...BASE_VALIDATOR, validatorQueuedVetStaked: 1000 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('validatorQueuedVetStaked accepts a number when present', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, validatorQueuedVetStaked: 1000 }),
+    ).not.toThrow()
   })
 
-  test('delegatorQueuedVetStaked must be numeric string when present', () => {
-    const bad = { ...BASE_VALIDATOR, delegatorQueuedVetStaked: 0 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('validatorQueuedVetStaked rejects a string', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, validatorQueuedVetStaked: '1000' }),
+    ).toThrow()
   })
 
-  test('validatorExitingVetStaked must be numeric string when present', () => {
-    const bad = { ...BASE_VALIDATOR, validatorExitingVetStaked: 0 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
-  })
-
-  test('delegatorExitingVetStaked must be numeric string when present', () => {
-    const bad = { ...BASE_VALIDATOR, delegatorExitingVetStaked: 0 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('delegatorQueuedVetStaked accepts zero as a number', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, delegatorQueuedVetStaked: 0 }),
+    ).not.toThrow()
   })
 
   test('totalRewards is optional', () => {
@@ -133,14 +166,12 @@ describe('IndexerValidatorSchema — optional VET amount fields', () => {
     expect(() => IndexerValidatorSchema.parse(noRewards)).not.toThrow()
   })
 
-  test('totalRewards must be numeric string when present', () => {
-    const bad = { ...BASE_VALIDATOR, totalRewards: 9999.99 }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('totalRewards accepts a number when present', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalRewards: 9999.99 })).not.toThrow()
   })
 
-  test('totalRewards accepts a valid VTHO numeric string', () => {
-    const good = { ...BASE_VALIDATOR, totalRewards: '1000000000000000000' } // 1 VTHO in wei
-    expect(() => IndexerValidatorSchema.parse(good)).not.toThrow()
+  test('totalRewards rejects Infinity', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalRewards: Infinity })).toThrow()
   })
 })
 
@@ -149,9 +180,8 @@ describe('IndexerValidatorSchema — float fields remain JSON numbers', () => {
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, blockProbability: 0.042 })).not.toThrow()
   })
 
-  test('blockProbability rejects a numeric string', () => {
-    const bad = { ...BASE_VALIDATOR, blockProbability: '0.042' }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('blockProbability rejects a string', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, blockProbability: '0.042' })).toThrow()
   })
 
   test('tvlBasedYield accepts a float', () => {
@@ -162,19 +192,8 @@ describe('IndexerValidatorSchema — float fields remain JSON numbers', () => {
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalTvl: 1234567.89 })).not.toThrow()
   })
 
-  test('totalTvl rejects a numeric string', () => {
-    const bad = { ...BASE_VALIDATOR, totalTvl: '1234567' }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
-  })
-
-  test('blockProbability rejects Infinity (non-finite)', () => {
-    const bad = { ...BASE_VALIDATOR, blockProbability: Infinity }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
-  })
-
-  test('tvlBasedYield rejects NaN (non-finite)', () => {
-    const bad = { ...BASE_VALIDATOR, tvlBasedYield: NaN }
-    expect(() => IndexerValidatorSchema.parse(bad)).toThrow()
+  test('totalTvl rejects a string', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalTvl: '1234567' })).toThrow()
   })
 })
 
@@ -188,7 +207,11 @@ describe('IndexerValidatorSchema — optional @JsonIgnore fields', () => {
   })
 
   test('beneficiary is nullable and optional', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, beneficiary: null })).not.toThrow()
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, beneficiary: undefined })).not.toThrow()
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, beneficiary: null }),
+    ).not.toThrow()
+    expect(() =>
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, beneficiary: undefined }),
+    ).not.toThrow()
   })
 })
