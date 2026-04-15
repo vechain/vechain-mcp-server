@@ -1222,26 +1222,22 @@ export const IndexerValidatorSchema = z
     ),
     beneficiary: ThorAddressSchema.nullable().optional().describe('Beneficiary address for rewards'),
     status: IndexerValidatorStatusSchema,
-    vetStaked: z
-      .number()
-      .finite()
-      .describe(
-        'Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts). Note: large values may lose precision in JS.',
-      ),
-    validatorVetStaked: z.number().finite().describe('VET staked by the validator directly'),
-    delegatorVetStaked: z.number().finite().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
-    queuedVetStaked: z
-      .number()
-      .finite()
-      .describe('Total queued VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    validatorQueuedVetStaked: z.number().finite().optional().describe('Queued VET staked by the validator directly'),
-    delegatorQueuedVetStaked: z.number().finite().optional().describe('Queued VET staked by delegators'),
-    exitingVetStaked: z
-      .number()
-      .finite()
-      .describe('Total exiting VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    validatorExitingVetStaked: z.number().finite().optional().describe('Exiting VET staked by the validator directly'),
-    delegatorExitingVetStaked: z.number().finite().optional().describe('Exiting VET staked by delegators'),
+    // VET amounts are BigInteger in the indexer and serialized as numeric strings (wei precision)
+    vetStaked: NumericString.describe(
+      'Total VET staked by the validator in wei, as a numeric string (endorsers VET staked + VET staked from delegations from stargate nfts)',
+    ),
+    validatorVetStaked: NumericString.describe('VET staked by the validator directly (wei, as numeric string)'),
+    delegatorVetStaked: NumericString.describe('VET staked by the delegators (Stargate NFTs) of the validator (wei, as numeric string)'),
+    queuedVetStaked: NumericString.describe(
+      'Total queued VET staked in wei, as a numeric string (endorsers VET staked + VET staked from delegations from stargate nfts)',
+    ),
+    validatorQueuedVetStaked: NumericString.optional().describe('Queued VET staked by the validator directly (wei, as numeric string)'),
+    delegatorQueuedVetStaked: NumericString.optional().describe('Queued VET staked by delegators (wei, as numeric string)'),
+    exitingVetStaked: NumericString.describe(
+      'Total exiting VET staked in wei, as a numeric string (endorsers VET staked + VET staked from delegations from stargate nfts)',
+    ),
+    validatorExitingVetStaked: NumericString.optional().describe('Exiting VET staked by the validator directly (wei, as numeric string)'),
+    delegatorExitingVetStaked: NumericString.optional().describe('Exiting VET staked by delegators (wei, as numeric string)'),
     cycleEndBlock: z.number().describe('Block number of the end of the current cycle'),
     blockProbability: z
       .number()
@@ -1256,7 +1252,7 @@ export const IndexerValidatorSchema = z
       .describe('Total value locked (USD) of the validator (endorsers TVL + TVL from delegations from stargate nfts)'),
     validatorTvl: z.number().finite().describe('Value locked (USD) of the validator directly'),
     delegatorTvl: z.number().finite().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
-    totalRewards: z.number().finite().optional().describe('Total VTHO rewards earned by the validator'),
+    totalRewards: NumericString.optional().describe('Total VTHO rewards earned by the validator (wei, as numeric string)'),
     tvlBasedYield: z
       .number()
       .finite()
@@ -1307,12 +1303,10 @@ export const IndexerValidatorSchema = z
         Flash: z.number().optional().describe('Projected next-cycle percentage yield for the Flash Stargate NFT level'),
       })
       .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
-    totalWeight: z
-      .number()
-      .finite()
-      .describe(
-        'Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2. Note: large values may lose precision in JS.',
-      ),
+    // totalWeight is a VET-amount-scale BigInteger (wei), serialized as a numeric string
+    totalWeight: NumericString.describe(
+      'Total weight of the validator in wei, as a numeric string. Equals total VET staked if no delegations; otherwise total VET staked by validator and delegators (Stargate NFTs) multiplied by 2.',
+    ),
     online: z.boolean().describe('Whether the validator is online'),
     completedPeriods: z.number().describe('Number of completed periods of the validator'),
     startBlock: z.number().describe('Block number of the start of the current cycle'),
