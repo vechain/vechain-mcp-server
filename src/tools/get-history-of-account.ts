@@ -77,6 +77,7 @@ export const getHistoryOfAccount: MCPTool = {
   - B3TR_SWAP_B3TR_TO_VOT3: Converting B3TR to VOT3
   - B3TR_PROPOSAL_SUPPORT: Supporting a proposal with B3TR
   - B3TR_PROPOSAL_VOTE: Voting on governance proposal
+  - B3TR_PROPOSAL_WITHDRAW: Withdrawing a B3TR proposal
   - B3TR_XALLOCATION_VOTE: Voting on X-Allocation distribution
   - B3TR_CLAIM_REWARD: Claiming B3TR ecosystem rewards
   - B3TR_UPGRADE_GM: Upgrading governance model

@@ -28,6 +28,14 @@ describe('Indexer Stargate Total VET Staked', () => {
     const structured = parsed.structuredContent
     expect(structured.network).toBeDefined()
     expect(typeof structured.ok).toBe('boolean')
+
+    if (!structured.ok) {
+      // Indexer unavailable or returned an error — surface the message rather than
+      // failing on null data access (mirrors the pattern in get-validators integration test)
+      expect(typeof (structured as any).error).toBe('string')
+      return
+    }
+
     expect(typeof structured.data).toBe('object')
 
     // total is now a numeric string (BigInteger precision)
