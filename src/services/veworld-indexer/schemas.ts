@@ -1264,7 +1264,22 @@ export const IndexerValidatorSchema = z
     nextCycleTvlBasedYield: z.number().optional().describe('Projected TVL-based yield for next cycle'),
     nextCycleValidatorYield: z.number().optional().describe('Projected validator yield for next cycle'),
     nextCycleAvgDelegatorYield: z.number().optional().describe('Projected average delegator yield for next cycle'),
-    nftYieldsNextCycle: z
+    nftYields: z
+      .object({
+        Strength: z.number().optional().describe('Current-cycle percentage yield for the Strength Stargate NFT level'),
+        Thunder: z.number().optional().describe('Current-cycle percentage yield for the Thunder Stargate NFT level'),
+        Mjolnir: z.number().optional().describe('Current-cycle percentage yield for the Mjolnir Stargate NFT level'),
+        VeThorX: z.number().optional().describe('Current-cycle percentage yield for the VeThorX Stargate NFT level'),
+        StrengthX: z.number().optional().describe('Current-cycle percentage yield for the StrengthX Stargate NFT level'),
+        ThunderX: z.number().optional().describe('Current-cycle percentage yield for the ThunderX Stargate NFT level'),
+        MjolnirX: z.number().optional().describe('Current-cycle percentage yield for the MjolnirX Stargate NFT level'),
+        Dawn: z.number().optional().describe('Current-cycle percentage yield for the Dawn Stargate NFT level'),
+        Lightning: z.number().optional().describe('Current-cycle percentage yield for the Lightning Stargate NFT level'),
+        Flash: z.number().optional().describe('Current-cycle percentage yield for the Flash Stargate NFT level'),
+      })
+      .optional()
+      .describe('Current-cycle yields per Stargate NFT level for tokens already delegated to this validator. Levels with no active delegation may be omitted.'),
+    nftYieldsIfDelegatedNextCycle: z
       .object({
         Strength: z.number().optional().describe('Projected next-cycle percentage yield for the Strength Stargate NFT level'),
         Thunder: z.number().optional().describe('Projected next-cycle percentage yield for the Thunder Stargate NFT level'),
@@ -1277,7 +1292,8 @@ export const IndexerValidatorSchema = z
         Lightning: z.number().optional().describe('Projected next-cycle percentage yield for the Lightning Stargate NFT level'),
         Flash: z.number().optional().describe('Projected next-cycle percentage yield for the Flash Stargate NFT level'),
       })
-      .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
+      .optional()
+      .describe('Projected next-cycle yields per Stargate NFT level if a token of that level were delegated to this validator. Use this for delegation-decision sorting (matches the `nft:<Level>` sortBy keys).'),
     totalWeight: z
       .number()
       .describe(

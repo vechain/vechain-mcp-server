@@ -44,7 +44,19 @@ const BASE_VALIDATOR = {
   blocksPerYear: 5256000,
   percentageOffline: 0.0,
   offlineBlocks: 0,
-  nftYieldsNextCycle: {
+  nftYields: {
+    Strength: 0.04,
+    Thunder: 0.05,
+    Mjolnir: 0.06,
+    VeThorX: 0.07,
+    StrengthX: 0.08,
+    ThunderX: 0.09,
+    MjolnirX: 0.1,
+    Dawn: 0.03,
+    Lightning: 0.035,
+    Flash: 0.04,
+  },
+  nftYieldsIfDelegatedNextCycle: {
     Strength: 0.05,
     Thunder: 0.06,
     Mjolnir: 0.07,
@@ -224,22 +236,44 @@ describe('IndexerValidatorSchema — percentageOffline and offlineBlocks', () =>
   })
 })
 
-describe('IndexerValidatorSchema — nftYieldsNextCycle', () => {
+describe('IndexerValidatorSchema — nftYields and nftYieldsIfDelegatedNextCycle', () => {
   // Plain z.number().optional() — no .finite() because the live API may return
   // null/NaN for validators with no yield history for a given NFT level.
-  test('nftYieldsNextCycle entries accept floats', () => {
+  // Both objects themselves are optional and may be omitted entirely (e.g. for
+  // validators with no delegations, the indexer returns `nftYields: {}` or omits it).
+  test('nftYieldsIfDelegatedNextCycle entries accept floats', () => {
     expect(() =>
       IndexerValidatorSchema.parse({
         ...BASE_VALIDATOR,
-        nftYieldsNextCycle: { ...BASE_VALIDATOR.nftYieldsNextCycle, Dawn: 0.08 },
+        nftYieldsIfDelegatedNextCycle: { ...BASE_VALIDATOR.nftYieldsIfDelegatedNextCycle, Dawn: 0.08 },
       }),
     ).not.toThrow()
   })
 
-  test('nftYieldsNextCycle entries are optional (can be omitted)', () => {
-    const { Dawn: _omit, ...rest } = BASE_VALIDATOR.nftYieldsNextCycle
+  test('nftYieldsIfDelegatedNextCycle entries are optional (can be omitted)', () => {
+    const { Dawn: _omit, ...rest } = BASE_VALIDATOR.nftYieldsIfDelegatedNextCycle
     expect(() =>
-      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, nftYieldsNextCycle: rest }),
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, nftYieldsIfDelegatedNextCycle: rest }),
     ).not.toThrow()
+  })
+
+  test('nftYields entries accept floats', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({
+        ...BASE_VALIDATOR,
+        nftYields: { ...BASE_VALIDATOR.nftYields, Dawn: 0.07 },
+      }),
+    ).not.toThrow()
+  })
+
+  test('both nftYields and nftYieldsIfDelegatedNextCycle objects are optional', () => {
+    const noYields = { ...BASE_VALIDATOR }
+    delete (noYields as any).nftYields
+    delete (noYields as any).nftYieldsIfDelegatedNextCycle
+    expect(() => IndexerValidatorSchema.parse(noYields)).not.toThrow()
+  })
+
+  test('nftYields accepts an empty object (validator with no delegations)', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, nftYields: {} })).not.toThrow()
   })
 })
