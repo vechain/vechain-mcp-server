@@ -5,11 +5,10 @@
  * (not strings). Unlike Stargate BigInteger fields (which are string-serialized),
  * validator metrics are computed/scaled values returned as IEEE-754 doubles.
  *
- * .finite() guards are applied only to fields confirmed safe by integration tests:
- * VET staked amounts, TVL, tvlBasedYield, blockProbability, and projected yields.
- * Fields like percentageOffline, offlineBlocks, and nftYieldsNextCycle are left
- * as plain z.number() because the live API returns NaN or non-integer values for
- * some validators (e.g. new validators with no history).
+ * No .finite() guards are applied to IndexerValidatorSchema fields. The live API
+ * returns NaN/Infinity for computed fields (e.g. yields, TVL) when the price oracle
+ * is unavailable or a validator has no history. Matching upstream main: all validator
+ * numeric fields are plain z.number() to avoid schema validation failures.
  *
  * These tests confirm the correct types so schema drift is caught immediately
  * rather than at runtime against the live API.
@@ -108,33 +107,22 @@ describe('IndexerValidatorSchema — VET staked fields accept JSON numbers', () 
   })
 })
 
-describe('IndexerValidatorSchema — finite() guards on VET and float fields', () => {
-  test('vetStaked rejects Infinity', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, vetStaked: Infinity })).toThrow()
+describe('IndexerValidatorSchema — Infinity vs NaN behaviour (no .finite())', () => {
+  // Zod v3 z.number() assigns parsedType "number" to Infinity (typeof Infinity === 'number'
+  // and !isNaN(Infinity)), so Infinity passes. The .finite() guard is what blocks it.
+  // NaN is different: Zod assigns parsedType "nan" and always rejects it even without
+  // .finite(). If the live API ever returns NaN for these fields the MCP framework will
+  // strip structuredContent; handle that at the transport/integration layer, not here.
+  test('vetStaked accepts Infinity (no .finite() guard)', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, vetStaked: Infinity })).not.toThrow()
   })
 
-  test('vetStaked rejects NaN', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, vetStaked: NaN })).toThrow()
+  test('blockProbability rejects NaN (Zod z.number() always rejects NaN)', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, blockProbability: NaN })).toThrow()
   })
 
-  test('totalWeight rejects Infinity', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalWeight: Infinity })).toThrow()
-  })
-
-  test('blockProbability rejects Infinity (non-finite)', () => {
-    expect(() =>
-      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, blockProbability: Infinity }),
-    ).toThrow()
-  })
-
-  test('tvlBasedYield rejects NaN (non-finite)', () => {
-    expect(() =>
-      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, tvlBasedYield: NaN }),
-    ).toThrow()
-  })
-
-  test('totalTvl rejects Infinity', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalTvl: Infinity })).toThrow()
+  test('tvlBasedYield rejects NaN (Zod z.number() always rejects NaN)', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, tvlBasedYield: NaN })).toThrow()
   })
 })
 
@@ -173,8 +161,8 @@ describe('IndexerValidatorSchema — optional VET staked fields', () => {
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalRewards: 9999.99 })).not.toThrow()
   })
 
-  test('totalRewards rejects Infinity', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalRewards: Infinity })).toThrow()
+  test('totalRewards accepts Infinity (no finite guard)', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, totalRewards: Infinity })).not.toThrow()
   })
 })
 
