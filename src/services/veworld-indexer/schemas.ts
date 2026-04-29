@@ -726,14 +726,14 @@ export const VevoteHistoricProposalSchema = z
     title: z.string().nullable().optional().describe('Title of the proposal'),
     description: z.string().nullable().optional().describe('Description of the proposal'),
     choices: z.array(z.string()).nullable().optional().describe('Choices for the proposal'),
-    createTime: z.number().nullable().optional().describe('Unix timestamp when the proposal was created'),
-    votingStartTime: z.number().nullable().optional().describe('Unix timestamp when voting starts'),
-    votingEndTime: z.number().nullable().optional().describe('Unix timestamp when voting ends'),
+    createTime: UnixTimestamp.nullable().optional().describe('Unix timestamp (seconds) when the proposal was created'),
+    votingStartTime: UnixTimestamp.nullable().optional().describe('Unix timestamp (seconds) when voting starts'),
+    votingEndTime: UnixTimestamp.nullable().optional().describe('Unix timestamp (seconds) when voting ends'),
     voteTallies: z.array(z.number()).nullable().optional().describe('Per-choice vote tallies'),
     totalVotes: z.number().nullable().optional().describe('Total number of votes cast'),
     blockId: ThorBlockIdSchema.optional().describe('Block id of creation'),
     blockNumber: ThorBlockNumberSchema.optional().describe('Block number of creation'),
-    blockTimestamp: z.number().optional().describe('Block timestamp (Unix seconds) of creation'),
+    blockTimestamp: UnixTimestamp.optional().describe('Block timestamp (Unix seconds) of creation'),
   })
   .passthrough()
   .describe('Legacy VeVote/ VeChain governance historic proposal entry')
@@ -838,7 +838,7 @@ export const IndexerGetB3TRActionsForAppParamsSchema = z
     size: z.number().optional(),
     direction: z.enum(['ASC', 'DESC']).optional(),
   })
-  .describe('Params for GET /api/v1/b3tr/actions/apps/{appId}')
+  .describe('MCP-facing input params for getB3TRActionsForApp. after/before are in seconds; the tool converts to ms before calling GET /api/v1/b3tr/actions/apps/{appId}')
 
 export const IndexerB3TRActionsListResponseSchema = indexerResponseSchema(IndexerB3TRActionSchema).describe(
   'List response for B3TR actions for an app',
@@ -855,7 +855,7 @@ export const IndexerGetB3TRActionsForUserParamsSchema = z
     size: z.number().optional().describe('Page size'),
     direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction'),
   })
-  .describe('Params for GET /api/v1/b3tr/actions/users/{wallet}')
+  .describe('MCP-facing input params for getB3TRActionsForUser. after/before are in seconds; the tool converts to ms before calling GET /api/v1/b3tr/actions/users/{wallet}')
 
 // User overview (totals) endpoint
 export const IndexerGetB3TRUserOverviewParamsSchema = z
@@ -1273,40 +1273,16 @@ export const IndexerValidatorSchema = z
     nextCycleAvgDelegatorYield: z.number().finite().optional().describe('Projected average delegator yield for next cycle'),
     nftYieldsNextCycle: z
       .object({
-        Strength: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the Strength Stargate NFT level'),
-        Thunder: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the Thunder Stargate NFT level'),
-        Mjolnir: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the Mjolnir Stargate NFT level'),
-        VeThorX: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the VeThorX Stargate NFT level'),
-        StrengthX: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the StrengthX Stargate NFT level'),
-        ThunderX: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the ThunderX Stargate NFT level'),
-        MjolnirX: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the MjolnirX Stargate NFT level'),
-        Dawn: z.number().optional().describe('Projected next-cycle percentage yield for the Dawn Stargate NFT level'),
-        Lightning: z
-          .number()
-          .optional()
-          .describe('Projected next-cycle percentage yield for the Lightning Stargate NFT level'),
-        Flash: z.number().optional().describe('Projected next-cycle percentage yield for the Flash Stargate NFT level'),
+        Strength: z.number().finite().optional().describe('Projected next-cycle percentage yield for the Strength Stargate NFT level'),
+        Thunder: z.number().finite().optional().describe('Projected next-cycle percentage yield for the Thunder Stargate NFT level'),
+        Mjolnir: z.number().finite().optional().describe('Projected next-cycle percentage yield for the Mjolnir Stargate NFT level'),
+        VeThorX: z.number().finite().optional().describe('Projected next-cycle percentage yield for the VeThorX Stargate NFT level'),
+        StrengthX: z.number().finite().optional().describe('Projected next-cycle percentage yield for the StrengthX Stargate NFT level'),
+        ThunderX: z.number().finite().optional().describe('Projected next-cycle percentage yield for the ThunderX Stargate NFT level'),
+        MjolnirX: z.number().finite().optional().describe('Projected next-cycle percentage yield for the MjolnirX Stargate NFT level'),
+        Dawn: z.number().finite().optional().describe('Projected next-cycle percentage yield for the Dawn Stargate NFT level'),
+        Lightning: z.number().finite().optional().describe('Projected next-cycle percentage yield for the Lightning Stargate NFT level'),
+        Flash: z.number().finite().optional().describe('Projected next-cycle percentage yield for the Flash Stargate NFT level'),
       })
       .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
     totalWeight: z
@@ -1320,8 +1296,8 @@ export const IndexerValidatorSchema = z
     startBlock: z.number().describe('Block number of the start of the current cycle'),
     cyclePeriodLength: z.number().describe('Length of the current cycle in blocks'),
     blocksPerYear: z.number().describe('Number of blocks per year'),
-    percentageOffline: z.number().describe('Percentage of time the validator has been offline'),
-    offlineBlocks: z.number().describe('Number of blocks the validator has been offline'),
+    percentageOffline: z.number().finite().describe('Percentage of time the validator has been offline'),
+    offlineBlocks: z.number().int().nonnegative().finite().describe('Number of blocks the validator has been offline'),
     exitBlock: z.number().optional().describe('Block number when exit was requested'),
     queuePosition: z.number().optional().describe('Position in the activation queue'),
     availableStartBlock: z.number().optional().describe('Block number when the validator becomes available'),
@@ -1419,8 +1395,8 @@ export const IndexerValidatorBlockRewardSchema = z
       .string()
       .optional()
       .describe('Portion of total retained by the validator after delegator share.'),
-    blocksOffline: z.number().optional().describe('Number of blocks the validator was offline in this period'),
-    onlineBlock: z.number().optional().describe('Block number when the validator came online'),
+    blocksOffline: z.number().int().nonnegative().finite().optional().describe('Number of blocks the validator was offline in this period'),
+    onlineBlock: ThorBlockNumberSchema.optional().describe('Block number when the validator came online'),
   })
   .describe('Per-block reward breakdown for a validator')
 

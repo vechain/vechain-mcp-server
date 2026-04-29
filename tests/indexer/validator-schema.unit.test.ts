@@ -5,8 +5,9 @@
  * (not strings). Unlike Stargate BigInteger fields (which are string-serialized),
  * validator metrics are computed/scaled values returned as IEEE-754 doubles.
  *
- * .finite() guards are applied to float fields to reject Infinity/NaN that could
- * result from arithmetic overflow or missing values.
+ * .finite() guards are applied to staked-amount, TVL, yield, probability, and
+ * count fields to reject Infinity/NaN from arithmetic overflow. offlineBlocks
+ * additionally uses .int().nonnegative() as it is a block count.
  *
  * These tests confirm the correct types so schema drift is caught immediately
  * rather than at runtime against the live API.
@@ -213,5 +214,68 @@ describe('IndexerValidatorSchema — optional @JsonIgnore fields', () => {
     expect(() =>
       IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, beneficiary: undefined }),
     ).not.toThrow()
+  })
+})
+
+describe('IndexerValidatorSchema — percentageOffline and offlineBlocks constraints', () => {
+  test('percentageOffline accepts a finite float', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, percentageOffline: 0.05 })).not.toThrow()
+  })
+
+  test('percentageOffline rejects Infinity', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, percentageOffline: Infinity })).toThrow()
+  })
+
+  test('percentageOffline rejects NaN', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, percentageOffline: NaN })).toThrow()
+  })
+
+  test('offlineBlocks accepts zero', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: 0 })).not.toThrow()
+  })
+
+  test('offlineBlocks accepts a positive integer', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: 42 })).not.toThrow()
+  })
+
+  test('offlineBlocks rejects a negative number', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: -1 })).toThrow()
+  })
+
+  test('offlineBlocks rejects a float', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: 1.5 })).toThrow()
+  })
+
+  test('offlineBlocks rejects Infinity', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: Infinity })).toThrow()
+  })
+})
+
+describe('IndexerValidatorSchema — nftYieldsNextCycle finite guards', () => {
+  test('nftYieldsNextCycle entries accept finite floats', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({
+        ...BASE_VALIDATOR,
+        nftYieldsNextCycle: { ...BASE_VALIDATOR.nftYieldsNextCycle, Dawn: 0.08 },
+      }),
+    ).not.toThrow()
+  })
+
+  test('nftYieldsNextCycle entries reject Infinity', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({
+        ...BASE_VALIDATOR,
+        nftYieldsNextCycle: { ...BASE_VALIDATOR.nftYieldsNextCycle, Dawn: Infinity },
+      }),
+    ).toThrow()
+  })
+
+  test('nftYieldsNextCycle entries reject NaN', () => {
+    expect(() =>
+      IndexerValidatorSchema.parse({
+        ...BASE_VALIDATOR,
+        nftYieldsNextCycle: { ...BASE_VALIDATOR.nftYieldsNextCycle, Flash: NaN },
+      }),
+    ).toThrow()
   })
 })
