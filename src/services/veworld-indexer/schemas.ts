@@ -1222,55 +1222,48 @@ export const IndexerValidatorSchema = z
     ),
     beneficiary: ThorAddressSchema.nullable().optional().describe('Beneficiary address for rewards'),
     status: IndexerValidatorStatusSchema,
-    // VET staked amounts are returned as JSON numbers by the indexer (may lose JS precision for
-    // very large values; .finite() guards against Infinity/NaN produced by overflow)
+    // VET staked amounts are returned as JSON numbers (may lose JS precision for very large values)
     vetStaked: z
       .number()
-      .finite()
       .describe(
         'Total VET staked by the validator (endorsers VET staked + VET staked from delegations from stargate nfts). Note: large values may lose precision in JS.',
       ),
-    validatorVetStaked: z.number().finite().describe('VET staked by the validator directly'),
-    delegatorVetStaked: z.number().finite().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
+    validatorVetStaked: z.number().describe('VET staked by the validator directly'),
+    delegatorVetStaked: z.number().describe('VET staked by the delegators (Stargate NFTs) of the validator'),
     queuedVetStaked: z
       .number()
-      .finite()
       .describe('Total queued VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    validatorQueuedVetStaked: z.number().finite().optional().describe('Queued VET staked by the validator directly'),
-    delegatorQueuedVetStaked: z.number().finite().optional().describe('Queued VET staked by delegators'),
+    validatorQueuedVetStaked: z.number().optional().describe('Queued VET staked by the validator directly'),
+    delegatorQueuedVetStaked: z.number().optional().describe('Queued VET staked by delegators'),
     exitingVetStaked: z
       .number()
-      .finite()
       .describe('Total exiting VET staked (endorsers VET staked + VET staked from delegations from stargate nfts)'),
-    validatorExitingVetStaked: z.number().finite().optional().describe('Exiting VET staked by the validator directly'),
-    delegatorExitingVetStaked: z.number().finite().optional().describe('Exiting VET staked by delegators'),
+    validatorExitingVetStaked: z.number().optional().describe('Exiting VET staked by the validator directly'),
+    delegatorExitingVetStaked: z.number().optional().describe('Exiting VET staked by delegators'),
     cycleEndBlock: z.number().describe('Block number of the end of the current cycle'),
     blockProbability: z
       .number()
-      .finite()
       .describe(
         'Probability of the validator being selected to produce a block, based on the validator weight which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2',
       ),
     blocksPerEpoch: z.number().describe('Number of blocks per epoch'),
     totalTvl: z
       .number()
-      .finite()
       .describe('Total value locked (USD) of the validator (endorsers TVL + TVL from delegations from stargate nfts)'),
-    validatorTvl: z.number().finite().describe('Value locked (USD) of the validator directly'),
-    delegatorTvl: z.number().finite().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
-    totalRewards: z.number().finite().optional().describe('Total VTHO rewards earned by the validator'),
+    validatorTvl: z.number().describe('Value locked (USD) of the validator directly'),
+    delegatorTvl: z.number().describe('Value locked (USD) of the delegators (Stargate NFTs) of the validator'),
+    totalRewards: z.number().optional().describe('Total VTHO rewards earned by the validator'),
     tvlBasedYield: z
       .number()
-      .finite()
       .describe(
         'Yield of the validator based on the value locked (USD) of the validator and the delegators (Stargate NFTs), yield is effected by block probability of the validator',
       ),
-    validatorTvlPercentage: z.number().finite().optional().describe('Percentage of total TVL held by the validator'),
-    validatorYield: z.number().finite().optional().describe('Yield for the validator'),
-    avgDelegatorYield: z.number().finite().optional().describe('Average yield for delegators'),
-    nextCycleTvlBasedYield: z.number().finite().optional().describe('Projected TVL-based yield for next cycle'),
-    nextCycleValidatorYield: z.number().finite().optional().describe('Projected validator yield for next cycle'),
-    nextCycleAvgDelegatorYield: z.number().finite().optional().describe('Projected average delegator yield for next cycle'),
+    validatorTvlPercentage: z.number().optional().describe('Percentage of total TVL held by the validator'),
+    validatorYield: z.number().optional().describe('Yield for the validator'),
+    avgDelegatorYield: z.number().optional().describe('Average yield for delegators'),
+    nextCycleTvlBasedYield: z.number().optional().describe('Projected TVL-based yield for next cycle'),
+    nextCycleValidatorYield: z.number().optional().describe('Projected validator yield for next cycle'),
+    nextCycleAvgDelegatorYield: z.number().optional().describe('Projected average delegator yield for next cycle'),
     nftYieldsNextCycle: z
       .object({
         Strength: z.number().optional().describe('Projected next-cycle percentage yield for the Strength Stargate NFT level'),
@@ -1287,7 +1280,6 @@ export const IndexerValidatorSchema = z
       .describe('Projected next-cycle yields per Stargate NFT level, based on the block probability of the validator'),
     totalWeight: z
       .number()
-      .finite()
       .describe(
         'Total weight of the validator, which is the total VET staked by the validator if no delegations, otherwise it is the total VET staked by the validator and the delegators (Stargate NFTs) multiplied by 2. Note: large values may lose precision in JS.',
       ),
@@ -1395,7 +1387,7 @@ export const IndexerValidatorBlockRewardSchema = z
       .string()
       .optional()
       .describe('Portion of total retained by the validator after delegator share.'),
-    blocksOffline: z.number().finite().optional().describe('Number of blocks the validator was offline in this period'),
+    blocksOffline: z.number().optional().describe('Number of blocks the validator was offline in this period'),
     onlineBlock: ThorBlockNumberSchema.optional().describe('Block number when the validator came online'),
   })
   .describe('Per-block reward breakdown for a validator')
