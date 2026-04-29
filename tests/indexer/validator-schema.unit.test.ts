@@ -6,8 +6,9 @@
  * validator metrics are computed/scaled values returned as IEEE-754 doubles.
  *
  * .finite() guards are applied to staked-amount, TVL, yield, probability, and
- * count fields to reject Infinity/NaN from arithmetic overflow. offlineBlocks
- * additionally uses .int().nonnegative() as it is a block count.
+ * count fields to reject Infinity/NaN from arithmetic overflow. Only constraints
+ * verified against the live API are encoded — .int()/.nonneg() are not applied
+ * to fields like offlineBlocks whose real serialization format is unconfirmed.
  *
  * These tests confirm the correct types so schema drift is caught immediately
  * rather than at runtime against the live API.
@@ -234,20 +235,16 @@ describe('IndexerValidatorSchema — percentageOffline and offlineBlocks constra
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: 0 })).not.toThrow()
   })
 
-  test('offlineBlocks accepts a positive integer', () => {
+  test('offlineBlocks accepts a positive number', () => {
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: 42 })).not.toThrow()
-  })
-
-  test('offlineBlocks rejects a negative number', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: -1 })).toThrow()
-  })
-
-  test('offlineBlocks rejects a float', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: 1.5 })).toThrow()
   })
 
   test('offlineBlocks rejects Infinity', () => {
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: Infinity })).toThrow()
+  })
+
+  test('offlineBlocks rejects NaN', () => {
+    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: NaN })).toThrow()
   })
 })
 

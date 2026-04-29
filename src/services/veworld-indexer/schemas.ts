@@ -1297,7 +1297,7 @@ export const IndexerValidatorSchema = z
     cyclePeriodLength: z.number().describe('Length of the current cycle in blocks'),
     blocksPerYear: z.number().describe('Number of blocks per year'),
     percentageOffline: z.number().finite().describe('Percentage of time the validator has been offline'),
-    offlineBlocks: z.number().int().nonnegative().finite().describe('Number of blocks the validator has been offline'),
+    offlineBlocks: z.number().finite().describe('Number of blocks the validator has been offline'),
     exitBlock: z.number().optional().describe('Block number when exit was requested'),
     queuePosition: z.number().optional().describe('Position in the activation queue'),
     availableStartBlock: z.number().optional().describe('Block number when the validator becomes available'),
@@ -1395,7 +1395,7 @@ export const IndexerValidatorBlockRewardSchema = z
       .string()
       .optional()
       .describe('Portion of total retained by the validator after delegator share.'),
-    blocksOffline: z.number().int().nonnegative().finite().optional().describe('Number of blocks the validator was offline in this period'),
+    blocksOffline: z.number().finite().optional().describe('Number of blocks the validator was offline in this period'),
     onlineBlock: ThorBlockNumberSchema.optional().describe('Block number when the validator came online'),
   })
   .describe('Per-block reward breakdown for a validator')
