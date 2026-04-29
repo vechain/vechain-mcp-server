@@ -5,10 +5,11 @@
  * (not strings). Unlike Stargate BigInteger fields (which are string-serialized),
  * validator metrics are computed/scaled values returned as IEEE-754 doubles.
  *
- * .finite() guards are applied to staked-amount, TVL, yield, probability, and
- * count fields to reject Infinity/NaN from arithmetic overflow. Only constraints
- * verified against the live API are encoded — .int()/.nonneg() are not applied
- * to fields like offlineBlocks whose real serialization format is unconfirmed.
+ * .finite() guards are applied only to fields confirmed safe by integration tests:
+ * VET staked amounts, TVL, tvlBasedYield, blockProbability, and projected yields.
+ * Fields like percentageOffline, offlineBlocks, and nftYieldsNextCycle are left
+ * as plain z.number() because the live API returns NaN or non-integer values for
+ * some validators (e.g. new validators with no history).
  *
  * These tests confirm the correct types so schema drift is caught immediately
  * rather than at runtime against the live API.
@@ -218,17 +219,12 @@ describe('IndexerValidatorSchema — optional @JsonIgnore fields', () => {
   })
 })
 
-describe('IndexerValidatorSchema — percentageOffline and offlineBlocks constraints', () => {
-  test('percentageOffline accepts a finite float', () => {
+describe('IndexerValidatorSchema — percentageOffline and offlineBlocks', () => {
+  // These fields are plain z.number() — no .finite() because the live API
+  // can return NaN (e.g. percentageOffline for validators with no history)
+  // and non-integer values (e.g. offlineBlocks from computed metrics).
+  test('percentageOffline accepts a float', () => {
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, percentageOffline: 0.05 })).not.toThrow()
-  })
-
-  test('percentageOffline rejects Infinity', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, percentageOffline: Infinity })).toThrow()
-  })
-
-  test('percentageOffline rejects NaN', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, percentageOffline: NaN })).toThrow()
   })
 
   test('offlineBlocks accepts zero', () => {
@@ -238,18 +234,12 @@ describe('IndexerValidatorSchema — percentageOffline and offlineBlocks constra
   test('offlineBlocks accepts a positive number', () => {
     expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: 42 })).not.toThrow()
   })
-
-  test('offlineBlocks rejects Infinity', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: Infinity })).toThrow()
-  })
-
-  test('offlineBlocks rejects NaN', () => {
-    expect(() => IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, offlineBlocks: NaN })).toThrow()
-  })
 })
 
-describe('IndexerValidatorSchema — nftYieldsNextCycle finite guards', () => {
-  test('nftYieldsNextCycle entries accept finite floats', () => {
+describe('IndexerValidatorSchema — nftYieldsNextCycle', () => {
+  // Plain z.number().optional() — no .finite() because the live API may return
+  // null/NaN for validators with no yield history for a given NFT level.
+  test('nftYieldsNextCycle entries accept floats', () => {
     expect(() =>
       IndexerValidatorSchema.parse({
         ...BASE_VALIDATOR,
@@ -258,21 +248,10 @@ describe('IndexerValidatorSchema — nftYieldsNextCycle finite guards', () => {
     ).not.toThrow()
   })
 
-  test('nftYieldsNextCycle entries reject Infinity', () => {
+  test('nftYieldsNextCycle entries are optional (can be omitted)', () => {
+    const { Dawn: _omit, ...rest } = BASE_VALIDATOR.nftYieldsNextCycle
     expect(() =>
-      IndexerValidatorSchema.parse({
-        ...BASE_VALIDATOR,
-        nftYieldsNextCycle: { ...BASE_VALIDATOR.nftYieldsNextCycle, Dawn: Infinity },
-      }),
-    ).toThrow()
-  })
-
-  test('nftYieldsNextCycle entries reject NaN', () => {
-    expect(() =>
-      IndexerValidatorSchema.parse({
-        ...BASE_VALIDATOR,
-        nftYieldsNextCycle: { ...BASE_VALIDATOR.nftYieldsNextCycle, Flash: NaN },
-      }),
-    ).toThrow()
+      IndexerValidatorSchema.parse({ ...BASE_VALIDATOR, nftYieldsNextCycle: rest }),
+    ).not.toThrow()
   })
 })
