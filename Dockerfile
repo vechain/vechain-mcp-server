@@ -1,5 +1,9 @@
-# Build stage
-FROM node:24-slim AS builder
+# syntax=docker/dockerfile:1.7
+
+# ---------------------------------------------------------------------------
+# Build stage — Alpine with npm/build tooling
+# ---------------------------------------------------------------------------
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -7,30 +11,35 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Build the project
+# Build the project (outputs dist/http.js + dist/stdio.js)
 COPY . .
 RUN npm run build
 
-# Runtime stage
-FROM node:24-slim AS runner
+# Reduce node_modules to production-only (we copy this into runtime)
+RUN npm ci --omit=dev \
+  && npm cache clean --force
+
+# ---------------------------------------------------------------------------
+# Runtime stage — Google distroless (no shell, no package manager, nonroot)
+# Image: gcr.io/distroless/nodejs24-debian12:nonroot
+# - Public, no auth required
+# - Runs as user 65532 (nonroot)
+# - ENTRYPOINT is already ["/nodejs/bin/node"], so CMD is just script args
+# ---------------------------------------------------------------------------
+FROM gcr.io/distroless/nodejs24-debian12:nonroot AS runner
 
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Install only production dependencies
-COPY package*.json ./
-RUN npm ci --omit=dev \
-  && npm cache clean --force \
-  && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
-
-# Copy built artifacts (dist/http.js = wrapper, dist/stdio.js = MCP child)
+# Copy production node_modules + built artifacts + package.json (for ESM type:module)
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./package.json
 
 ENV PORT=3000
 ENV VECHAIN_NETWORK=mainnet
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:'+(process.env.PORT||3000)+'/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
-
-CMD ["node", "dist/http.js"]
+# Distroless has no shell — rely on platform health check (e.g. App Runner /ready)
+# CMD is appended to the image's ENTRYPOINT (`/nodejs/bin/node`)
+CMD ["dist/http.js"]
