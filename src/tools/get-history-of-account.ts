@@ -77,6 +77,7 @@ export const getHistoryOfAccount: MCPTool = {
   - B3TR_SWAP_B3TR_TO_VOT3: Converting B3TR to VOT3
   - B3TR_PROPOSAL_SUPPORT: Supporting a proposal with B3TR
   - B3TR_PROPOSAL_VOTE: Voting on governance proposal
+  - B3TR_PROPOSAL_WITHDRAW: Withdrawing a B3TR proposal
   - B3TR_XALLOCATION_VOTE: Voting on X-Allocation distribution
   - B3TR_CLAIM_REWARD: Claiming B3TR ecosystem rewards
   - B3TR_UPGRADE_GM: Upgrading governance model
@@ -104,7 +105,7 @@ export const getHistoryOfAccount: MCPTool = {
   - eventName: Single string OR array (ALWAYS prefer arrays for related events)
   - searchBy: 'to' | 'from' | 'origin' | 'gasPayer' - filter by address role
   - contractAddress: Filter by specific contract interactions
-  - after/before: Unix timestamps (seconds) for time range
+  - after/before: Unix timestamps in SECONDS (NOT milliseconds). Example: 2025-08-03 00:00 UTC = 1754179200, 2025-08-04 00:00 UTC = 1754265600
   - Pagination: page, size, cursor, direction (ASC/DESC)
   
   Returns paginated array of events with full transaction details.`,
@@ -136,7 +137,10 @@ export const getHistoryOfAccount: MCPTool = {
       })
 
       if (!response?.data) {
-        return indexerErrorResponse('Failed to fetch history from VeWorld Indexer')
+        return indexerErrorResponse(
+          `Failed to fetch history for ${validatedAddress} from VeWorld Indexer. ` +
+            'The address may not have any history, or the indexer returned an unexpected response.',
+        )
       }
 
       const history = response.data

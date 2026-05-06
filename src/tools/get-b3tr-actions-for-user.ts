@@ -22,8 +22,8 @@ const InputSchema = z
   .object({
     wallet: z.string().describe('User wallet address (0x...) or VNS name'),
     appId: z.string().optional().describe('Optional app ID to filter interactions'),
-    after: z.number().optional().describe('Return records after this time (Unix time in milliseconds)'),
-    before: z.number().optional().describe('Return records before this time (Unix time in milliseconds)'),
+    after: z.number().int().nonnegative().optional().describe('Return records after this Unix timestamp in seconds (e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
+    before: z.number().int().nonnegative().optional().describe('Return records before this Unix timestamp in seconds (e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
     page: z.number().optional(),
     size: z.number().optional(),
     direction: z.enum(['ASC', 'DESC']).optional(),
@@ -52,8 +52,9 @@ export const getB3TRActionsForUser: MCPTool = {
         endPoint: `/api/v1/b3tr/actions/users/${walletAddress}`,
         params: {
           appId: parsed.appId,
-          after: parsed.after,
-          before: parsed.before,
+          // API expects milliseconds; user-facing schema accepts seconds → convert here
+          after: parsed.after != null ? parsed.after * 1000 : undefined,
+          before: parsed.before != null ? parsed.before * 1000 : undefined,
           page: parsed.page,
           size: parsed.size,
           direction: parsed.direction,
