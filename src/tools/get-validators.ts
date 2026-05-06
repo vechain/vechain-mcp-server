@@ -28,7 +28,8 @@ export const getValidators: MCPTool = {
     `Retrieve validator statistics via /api/v1/validators for Stargate NFT delegation decisions and validator performance. **IMPORTANT: Look at all no status filter when getting validators when getting nft yields, when getting current validator not nft yields look at status=ACTIVE**
 
 KEY METRICS:
-- nftYieldsNextCycle: Projected APY (%) for each Stargate NFT level in the next cycle
+- nftYieldsIfDelegatedNextCycle: Projected APY (%) for each Stargate NFT level in the next cycle if delegated to this validator (use this for delegation decisions)
+- nftYields: Current-cycle APY (%) for each Stargate NFT level already delegated to this validator
 - blockProbability: Validator's chance of producing blocks (higher = more rewards)
 - percentageOffline: Validator uptime reliability (lower = better)
 - delegatorTvl: Total USD value delegated by Stargate NFTs (higher = more competition)
@@ -46,7 +47,7 @@ SORTING (sortBy parameter):
 PAGINATION: Supports page, size, cursor, and direction (ASC/DESC)
 
 VALIDATOR RECOMMENDATION GUIDELINES:
-1. Primary metric: nftYieldsNextCycle[level] - this is APY percentage, NOT absolute VTHO
+1. Primary metric: nftYieldsIfDelegatedNextCycle[level] - this is APY percentage, NOT absolute VTHO
 2. Sort by the user's NFT level (e.g., sortBy='nft:Dawn' for Dawn NFTs)
 3. Filter to status=ACTIVE for currently operating validators
 4. Consider percentageOffline as secondary factor (reject if >30%)
