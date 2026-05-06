@@ -56,15 +56,11 @@ class McpClient {
     const args = isDev ? ['tsx', mcpBin] : [mcpBin]
 
     this.proc = spawn(command, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ['pipe', 'pipe', 'inherit'],
       env: { ...process.env, VECHAIN_NETWORK },
     })
 
     this.proc.stdout?.on('data', chunk => this._onData(chunk))
-    this.proc.stderr?.on('data', chunk => {
-      const lines = chunk.toString().trim()
-      if (lines) log('debug', lines, { src: 'mcp:stderr' })
-    })
     this.proc.on('close', code => this._handleProcessExit(code ?? 1))
     this.proc.on('error', err => {
       log('error', 'MCP process error', { error: err.message })
