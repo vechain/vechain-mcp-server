@@ -36,11 +36,14 @@ jobs:
     steps:
       - name: Determine image tag
         id: tag
+        env:
+          INPUT_IMAGE_TAG: ${{ inputs.image_tag }}
+          GIT_SHA: ${{ github.sha }}
         run: |
-          if [ -n "${{ inputs.image_tag }}" ]; then
-            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          if [ -n "$INPUT_IMAGE_TAG" ]; then
+            echo "tag=$INPUT_IMAGE_TAG" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "tag=$GIT_SHA" >> "$GITHUB_OUTPUT"
           fi
 
   validate:
@@ -68,6 +71,7 @@ jobs:
           docker run -d --rm \
             -p 4000:4000 \
             -e VECHAIN_NETWORK=mainnet \
+            -e PORT=4000 \
             --name vechain-mcp-ci \
             vechain-mcp-server:ci-test
 
@@ -161,20 +165,20 @@ jobs:
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
 
       - name: Set up QEMU # NOTE: Delete this step if the repo becomes public and we use an arm runner
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@19d944daaa35f0fa1d3f7f8af1d3f2e5de25c5b7 # v2.1.4
 
       - name: Ensure ECR repository exists
         run: |
@@ -190,7 +194,7 @@ jobs:
 
       - name: Build and push (${{ matrix.platform }})
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: .
           push: true
@@ -210,14 +214,14 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@19d944daaa35f0fa1d3f7f8af1d3f2e5de25c5b7 # v2.1.4
 
       - name: Login to GHCR
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
@@ -323,7 +327,7 @@ jobs:
       ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
