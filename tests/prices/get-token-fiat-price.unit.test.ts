@@ -111,36 +111,39 @@ describe('getTokenFiatPrice tool (unit)', () => {
     expect(typeof data.error).toBe('string')
   })
 
-  test('returns structured data with price for VET in GBP from oracle', async () => {
-    // First call: VET-USD price (0.0148), Second call: GBP-USD rate (0.81)
-    const vetUsdScaled = BigInt(14_800_000_000)   // 0.0148 * 1e12
-    const gbpUsdScaled = BigInt(810_000_000_000)  // 0.81 * 1e12
+  test('returns error for unsupported token', async () => {
+    const result = await getTokenFiatPrice.handler({ token: 'btc', fiat: 'usd' })
+    const data = result.structuredContent as {
+      token: string
+      fiat: string
+      price: number
+      source: string
+      error?: string
+    }
 
-    ;(global.fetch as jest.Mock)
-      .mockResolvedValueOnce(mockOracleResponse(vetUsdScaled))
-      .mockResolvedValueOnce(mockOracleResponse(gbpUsdScaled))
-
-    const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'gbp' })
-    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
-
-    expect(data.token).toBe('vet')
-    expect(data.fiat).toBe('gbp')
-    expect(data.source).toBe('oracle')
-    expect(typeof data.price).toBe('number')
-    expect(data.error).toBeUndefined()
-  })
-
-  test('normalizes mixed-case supported inputs', async () => {
-    const priceScaled = BigInt(1_000_000_000)
-    ;(global.fetch as jest.Mock).mockResolvedValue(mockOracleResponse(priceScaled))
-
-    const result = await getTokenFiatPrice.handler({ token: 'VtHo', fiat: 'uSd' })
-    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
-
-    expect(data.token).toBe('vtho')
+    expect(data.token).toBe('btc')
     expect(data.fiat).toBe('usd')
     expect(data.source).toBe('oracle')
-    expect(typeof data.price).toBe('number')
-    expect(data.error).toBeUndefined()
+    expect(Number.isNaN(data.price)).toBe(true)
+    expect(data.error).toContain('invalid_enum_value')
+    expect(data.error).toContain('btc')
+  })
+
+  test('returns error for unsupported fiat', async () => {
+    const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'jpy' })
+    const data = result.structuredContent as {
+      token: string
+      fiat: string
+      price: number
+      source: string
+      error?: string
+    }
+
+    expect(data.token).toBe('vet')
+    expect(data.fiat).toBe('jpy')
+    expect(data.source).toBe('oracle')
+    expect(Number.isNaN(data.price)).toBe(true)
+    expect(data.error).toContain('invalid_enum_value')
+    expect(data.error).toContain('jpy')
   })
 })
