@@ -26,11 +26,12 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "LOG_LEVEL=0 tsx --watch src/http.ts",
+    "dev": "LOG_LEVEL=0 PORT=4000 tsx --watch src/http.ts",
     "start": "node dist/http.js",
     "format": "biome format --write",
     "lint": "biome lint --write",
     "inspect": "DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run dev",
+    "pretest": "npm run build",
     "test": "start-server-and-test 'PORT=4000 node dist/http.js' http-get://localhost:4000/ready 'jest --config jest.config.js --runInBand'"
   },
   "dependencies": {
