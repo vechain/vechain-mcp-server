@@ -31,7 +31,7 @@
     "format": "biome format --write",
     "lint": "biome lint --write",
     "inspect": "DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run dev",
-    "test": "jest --config jest.config.js"
+    "test": "start-server-and-test 'PORT=4000 node dist/http.js' http-get://localhost:4000/ready 'jest --config jest.config.js --runInBand'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
