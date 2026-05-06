@@ -71,6 +71,7 @@ jobs:
           docker run -d --rm \
             -p 4000:4000 \
             -e VECHAIN_NETWORK=mainnet \
+            -e PORT=4000 \
             --name vechain-mcp-ci \
             vechain-mcp-server:ci-test
 
