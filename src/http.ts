@@ -46,11 +46,16 @@ class McpClient {
   async start(): Promise<void> {
     this._stopping = false
 
-    const __dirname = dirname(fileURLToPath(import.meta.url))
-    // Spawn sibling stdio entrypoint (built by tsup alongside this file)
-    const mcpBin = resolvePath(__dirname, 'stdio.js')
+    const currentFile = fileURLToPath(import.meta.url)
+    const __dirname = dirname(currentFile)
+    // In dev (tsx) we run from .ts; in build we run from .js next to stdio.js.
+    const isDev = currentFile.endsWith('.ts')
+    const mcpBin = resolvePath(__dirname, isDev ? 'stdio.ts' : 'stdio.js')
 
-    this.proc = spawn(process.execPath, [mcpBin], {
+    const command = isDev ? 'npx' : process.execPath
+    const args = isDev ? ['tsx', mcpBin] : [mcpBin]
+
+    this.proc = spawn(command, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, VECHAIN_NETWORK },
     })
