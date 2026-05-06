@@ -34,7 +34,7 @@
     "test": "start-server-and-test 'PORT=4000 node dist/http.js' http-get://localhost:4000/ready 'jest --config jest.config.js --runInBand'"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.2",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@vechain/sdk-core": "^2.0.5",
     "@vechain/sdk-network": "^2.0.5",
     "cors": "^2.8.5",

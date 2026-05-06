@@ -21,12 +21,12 @@ RUN npm ci --omit=dev \
 
 # ---------------------------------------------------------------------------
 # Runtime stage — Google distroless (no shell, no package manager, nonroot)
-# Image: gcr.io/distroless/nodejs24-debian12:nonroot
+# Image: gcr.io/distroless/nodejs24-debian13:nonroot
 # - Public, no auth required
 # - Runs as user 65532 (nonroot)
 # - ENTRYPOINT is already ["/nodejs/bin/node"], so CMD is just script args
 # ---------------------------------------------------------------------------
-FROM gcr.io/distroless/nodejs24-debian12:nonroot AS runner
+FROM gcr.io/distroless/nodejs24-debian13:nonroot AS runner
 
 ENV NODE_ENV=production
 WORKDIR /app
