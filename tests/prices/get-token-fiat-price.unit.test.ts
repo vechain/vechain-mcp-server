@@ -111,17 +111,36 @@ describe('getTokenFiatPrice tool (unit)', () => {
     expect(typeof data.error).toBe('string')
   })
 
-  test('returns error for unsupported token', async () => {
-    const result = await getTokenFiatPrice.handler({ token: 'btc', fiat: 'usd' })
-    const data = result.structuredContent as { error?: string }
-    
-    expect(data.error).toBeDefined()
+  test('returns structured data with price for VET in GBP from oracle', async () => {
+    // First call: VET-USD price (0.0148), Second call: GBP-USD rate (0.81)
+    const vetUsdScaled = BigInt(14_800_000_000)   // 0.0148 * 1e12
+    const gbpUsdScaled = BigInt(810_000_000_000)  // 0.81 * 1e12
+
+    ;(global.fetch as jest.Mock)
+      .mockResolvedValueOnce(mockOracleResponse(vetUsdScaled))
+      .mockResolvedValueOnce(mockOracleResponse(gbpUsdScaled))
+
+    const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'gbp' })
+    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
+
+    expect(data.token).toBe('vet')
+    expect(data.fiat).toBe('gbp')
+    expect(data.source).toBe('oracle')
+    expect(typeof data.price).toBe('number')
+    expect(data.error).toBeUndefined()
   })
 
-  test('returns error for unsupported fiat', async () => {
-    const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'jpy' })
-    const data = result.structuredContent as { error?: string }
-    
-    expect(data.error).toBeDefined()
+  test('normalizes mixed-case supported inputs', async () => {
+    const priceScaled = BigInt(1_000_000_000)
+    ;(global.fetch as jest.Mock).mockResolvedValue(mockOracleResponse(priceScaled))
+
+    const result = await getTokenFiatPrice.handler({ token: 'VtHo', fiat: 'uSd' })
+    const data = TokenFiatPriceDataSchema.parse(result.structuredContent)
+
+    expect(data.token).toBe('vtho')
+    expect(data.fiat).toBe('usd')
+    expect(data.source).toBe('oracle')
+    expect(typeof data.price).toBe('number')
+    expect(data.error).toBeUndefined()
   })
 })
