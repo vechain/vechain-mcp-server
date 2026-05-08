@@ -162,32 +162,34 @@ describe('getB3TRActionsForUser — InputSchema', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Seconds → milliseconds conversion tests (handler calls mock with ms)
+// Seconds passthrough tests (the indexer expects Unix time in SECONDS, see
+// /api-docs at https://indexer.mainnet.vechain.org/api-docs — the handler
+// must NOT multiply by 1000).
 // ---------------------------------------------------------------------------
 
-describe('getB3TRActionsForApp — seconds-to-milliseconds conversion', () => {
+describe('getB3TRActionsForApp — seconds passthrough', () => {
   const APP_ID = '0x3a66df25581b931b27557101b2d93f87e43c550d0675599f7a6029e9943a1566'
 
-  test('multiplies after by 1000 before calling the indexer', async () => {
+  test('passes after through unchanged (seconds)', async () => {
     await getB3TRActionsForApp.handler({ appId: APP_ID, after: 1754179200 } as any)
     expect(mockGet).toHaveBeenCalledTimes(1)
     const [callArg] = mockGet.mock.calls[0]
-    expect((callArg.params as any).after).toBe(1754179200 * 1000)
+    expect((callArg.params as any).after).toBe(1754179200)
   })
 
-  test('multiplies before by 1000 before calling the indexer', async () => {
+  test('passes before through unchanged (seconds)', async () => {
     await getB3TRActionsForApp.handler({ appId: APP_ID, before: 1754265600 } as any)
     const [callArg] = mockGet.mock.calls[0]
-    expect((callArg.params as any).before).toBe(1754265600 * 1000)
+    expect((callArg.params as any).before).toBe(1754265600)
   })
 
-  test('converts both after and before simultaneously', async () => {
+  test('passes both after and before unchanged (seconds)', async () => {
     const AFTER_S = 1754179200
     const BEFORE_S = 1754265600
     await getB3TRActionsForApp.handler({ appId: APP_ID, after: AFTER_S, before: BEFORE_S } as any)
     const [callArg] = mockGet.mock.calls[0]
-    expect((callArg.params as any).after).toBe(AFTER_S * 1000)
-    expect((callArg.params as any).before).toBe(BEFORE_S * 1000)
+    expect((callArg.params as any).after).toBe(AFTER_S)
+    expect((callArg.params as any).before).toBe(BEFORE_S)
   })
 
   test('passes undefined for after/before when not provided', async () => {
@@ -217,23 +219,23 @@ describe('getB3TRActionsForApp — seconds-to-milliseconds conversion', () => {
   })
 })
 
-describe('getB3TRActionsForUser — seconds-to-milliseconds conversion', () => {
+describe('getB3TRActionsForUser — seconds passthrough', () => {
   const WALLET = '0x311E811cd3fC29Ba17D45B04c882245FA69DC776'
 
-  test('multiplies after by 1000 before calling the indexer', async () => {
+  test('passes after through unchanged (seconds)', async () => {
     await getB3TRActionsForUser.handler({ wallet: WALLET, after: 1754179200 } as any)
     expect(mockGet).toHaveBeenCalledTimes(1)
     const [callArg] = mockGet.mock.calls[0]
-    expect((callArg.params as any).after).toBe(1754179200 * 1000)
+    expect((callArg.params as any).after).toBe(1754179200)
   })
 
-  test('multiplies before by 1000 before calling the indexer', async () => {
+  test('passes before through unchanged (seconds)', async () => {
     await getB3TRActionsForUser.handler({ wallet: WALLET, before: 1754265600 } as any)
     const [callArg] = mockGet.mock.calls[0]
-    expect((callArg.params as any).before).toBe(1754265600 * 1000)
+    expect((callArg.params as any).before).toBe(1754265600)
   })
 
-  test('converts both after and before simultaneously', async () => {
+  test('passes both after and before unchanged (seconds)', async () => {
     const AFTER_S = 1754179200
     const BEFORE_S = 1754265600
     await getB3TRActionsForUser.handler({
@@ -242,8 +244,8 @@ describe('getB3TRActionsForUser — seconds-to-milliseconds conversion', () => {
       before: BEFORE_S,
     } as any)
     const [callArg] = mockGet.mock.calls[0]
-    expect((callArg.params as any).after).toBe(AFTER_S * 1000)
-    expect((callArg.params as any).before).toBe(BEFORE_S * 1000)
+    expect((callArg.params as any).after).toBe(AFTER_S)
+    expect((callArg.params as any).before).toBe(BEFORE_S)
   })
 
   test('passes undefined for timestamps when not provided', async () => {
