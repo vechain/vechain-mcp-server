@@ -40,6 +40,11 @@ ENV PORT=3000
 ENV VECHAIN_NETWORK=mainnet
 EXPOSE 3000
 
+# Run explicitly as the distroless `nonroot` user (UID/GID 65532). The base
+# image already defaults to this user, but pinning it here keeps the
+# Dockerfile non-root even if a future base bump changes the default.
+USER 65532:65532
+
 # Distroless has no shell — rely on platform health check (e.g. App Runner /ready)
 # CMD is appended to the image's ENTRYPOINT (`/nodejs/bin/node`)
 CMD ["dist/http.js"]
