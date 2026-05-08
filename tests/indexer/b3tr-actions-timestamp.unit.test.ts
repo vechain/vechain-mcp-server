@@ -1,13 +1,15 @@
 /**
- * Unit tests for B3TR actions timestamp handling.
+ * Unit tests for B3TR actions tools.
  *
- * CONTEXT: The veworld-indexer B3TR actions API (/api/v1/b3tr/actions/...) internally
- * expects `after`/`before` query params in **milliseconds**. All other MCP tools
- * (getHistoryOfAccount, getTransactions, etc.) expose `after`/`before` in **seconds**.
+ * CONTEXT: The veworld-indexer B3TR actions API (/api/v1/b3tr/actions/...)
+ * accepts `after`/`before` query params in **Unix seconds** — see
+ * https://indexer.mainnet.vechain.org/api-docs:
+ *   "Return records after this time (Unix time in seconds)."
  *
- * To keep the user-facing API consistent, both `getB3TRActionsForApp` and
- * `getB3TRActionsForUser` accept seconds and convert to milliseconds before the
- * HTTP request. These tests verify schema validation and the conversion logic.
+ * Both `getB3TRActionsForApp` and `getB3TRActionsForUser` expose seconds in
+ * their user-facing schema and pass them through unchanged. These tests
+ * verify schema validation, that passthrough, and (for the user variant)
+ * that VNS names are resolved to a Thor address before the HTTP call.
  */
 
 import { z } from 'zod'
@@ -43,8 +45,10 @@ jest.mock('@/services/vns', () => ({
 import { getB3TRActionsForApp } from '@/tools/get-b3tr-actions-for-app'
 import { getB3TRActionsForUser } from '@/tools/get-b3tr-actions-for-user'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
+import { resolveVnsOrAddress } from '@/services/vns'
 
 const mockGet = veworldIndexerGet as jest.MockedFunction<typeof veworldIndexerGet>
+const mockResolveVns = resolveVnsOrAddress as jest.MockedFunction<typeof resolveVnsOrAddress>
 
 /** A minimal valid B3TR actions list response from the indexer */
 const MOCK_RESPONSE = {
@@ -266,5 +270,77 @@ describe('getB3TRActionsForUser — seconds passthrough', () => {
     mockGet.mockResolvedValueOnce(null as any)
     const result = await getB3TRActionsForUser.handler({ wallet: WALLET } as any)
     expect(result.structuredContent).toMatchObject({ ok: false })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// VNS resolution path
+// ---------------------------------------------------------------------------
+
+describe('getB3TRActionsForUser — VNS resolution', () => {
+  const HEX_WALLET = '0x311e811cd3fc29ba17d45b04c882245fa69dc776'
+
+  // Use a generic, app-flavoured VNS placeholder rather than a personal name.
+  // The actual on-chain registration is irrelevant — `resolveVnsOrAddress` is
+  // mocked, so these tests only exercise the wiring inside the handler.
+  const VNS_NAME = 'mugshot.vet'
+  const VNS_RESOLVED = '0xa1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
+
+  test('does not call the VNS resolver for a hex address', async () => {
+    // The default mock is identity (`addr => addr`), so this also confirms
+    // that a hex address survives untouched in the indexer URL.
+    await getB3TRActionsForUser.handler({ wallet: HEX_WALLET } as any)
+
+    expect(mockResolveVns).toHaveBeenCalledTimes(1)
+    expect(mockResolveVns).toHaveBeenCalledWith(HEX_WALLET)
+
+    const [callArg] = mockGet.mock.calls[0]
+    expect(callArg.endPoint).toBe(`/api/v1/b3tr/actions/users/${HEX_WALLET}`)
+  })
+
+  test('resolves a VNS name and uses the returned address in the URL', async () => {
+    mockResolveVns.mockResolvedValueOnce(VNS_RESOLVED as `0x${string}`)
+
+    await getB3TRActionsForUser.handler({ wallet: VNS_NAME } as any)
+
+    expect(mockResolveVns).toHaveBeenCalledTimes(1)
+    expect(mockResolveVns).toHaveBeenCalledWith(VNS_NAME)
+
+    expect(mockGet).toHaveBeenCalledTimes(1)
+    const [callArg] = mockGet.mock.calls[0]
+    expect(callArg.endPoint).toBe(`/api/v1/b3tr/actions/users/${VNS_RESOLVED}`)
+    expect(callArg.endPoint).not.toContain(VNS_NAME)
+    expect(callArg.endPoint).not.toContain('.vet')
+  })
+
+  test('combines VNS resolution with appId and timestamp filters', async () => {
+    mockResolveVns.mockResolvedValueOnce(VNS_RESOLVED as `0x${string}`)
+    const APP_ID = '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a'
+    const AFTER_S = 1754179200
+    const BEFORE_S = 1754265600
+
+    await getB3TRActionsForUser.handler({
+      wallet: VNS_NAME,
+      appId: APP_ID,
+      after: AFTER_S,
+      before: BEFORE_S,
+    } as any)
+
+    const [callArg] = mockGet.mock.calls[0]
+    expect(callArg.endPoint).toBe(`/api/v1/b3tr/actions/users/${VNS_RESOLVED}`)
+    expect((callArg.params as any).appId).toBe(APP_ID)
+    expect((callArg.params as any).after).toBe(AFTER_S)
+    expect((callArg.params as any).before).toBe(BEFORE_S)
+  })
+
+  test('propagates a VNS resolution failure as a tool error response', async () => {
+    mockResolveVns.mockRejectedValueOnce(new Error(`Unknown VNS name: ${VNS_NAME}`))
+
+    const result = await getB3TRActionsForUser.handler({ wallet: VNS_NAME } as any)
+
+    expect(mockGet).not.toHaveBeenCalled()
+    expect(result.structuredContent).toMatchObject({ ok: false })
+    const errMsg = (result.structuredContent as any).error as string
+    expect(errMsg).toContain('Unknown VNS name')
   })
 })
