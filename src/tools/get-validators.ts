@@ -85,7 +85,6 @@ VALIDATOR RECOMMENDATION GUIDELINES:
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching validators: ${String(error)}`)
       return indexerErrorResponse(`Error fetching validators: ${String(error)}`)
     }
   },

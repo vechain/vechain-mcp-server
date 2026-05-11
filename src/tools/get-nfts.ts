@@ -61,7 +61,6 @@ export const getNFTs: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting NFTs from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(`Error getting NFTs from VeWorld Indexer: ${String(error)}`)
     }
   },

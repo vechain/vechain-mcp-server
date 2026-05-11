@@ -120,7 +120,6 @@ export const getTransfersFrom: MCPTool = {
               return indexerErrorResponse(`Failed to fetch token registry`)
             }
           } catch (error) {
-            logger.warn(`Error fetching token registry: ${String(error)}`)
             return indexerErrorResponse(`Error resolving token symbol '${tokenAddress}'`)
           }
         }
@@ -154,7 +153,6 @@ export const getTransfersFrom: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting Transfers from ${params.address} from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(
         `Error getting Transfers from ${params.address} from VeWorld Indexer: ${String(error)}`,
       )

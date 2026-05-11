@@ -3,7 +3,7 @@ import { ThorAddressSchema } from '@/services/thor/schemas'
 import { VnsNameSchema, resolveVnsOrAddress } from '@/services/vns'
 import { getGMNFTLevel, getNetworkType, VEBETTERDAO_CONTRACTS } from '@/services/vebetterdao-contracts'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
-import { IndexerNFTAssetSchema } from '@/services/veworld-indexer/schemas'
+import type { IndexerNFTAssetSchema } from '@/services/veworld-indexer/schemas'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 

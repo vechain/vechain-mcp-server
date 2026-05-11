@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
-  IndexerB3TRActionSchema,
+  type IndexerB3TRActionSchema,
   IndexerB3TRActionsListResponseSchema,
   IndexerB3TRAppIdSchema,
 } from '@/services/veworld-indexer/schemas'
@@ -81,7 +81,6 @@ export const getB3TRActionsForUser: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR actions for user: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR actions for user: ${String(error)}`)
     }
   },

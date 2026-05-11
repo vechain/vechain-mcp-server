@@ -57,7 +57,6 @@ export const getValidatorBlockRewards: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching validator block rewards: ${String(error)}`)
       return indexerErrorResponse(`Error fetching validator block rewards: ${String(error)}`)
     }
   },

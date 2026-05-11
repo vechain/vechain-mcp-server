@@ -74,7 +74,6 @@ export const getAppHubApps: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching App Hub apps: ${String(error)}`)
       return indexerErrorResponse(`Error fetching App Hub apps: ${String(error)}`)
     }
   },

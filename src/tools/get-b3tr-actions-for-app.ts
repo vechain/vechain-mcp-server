@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
-  IndexerB3TRActionSchema,
+  type IndexerB3TRActionSchema,
   IndexerB3TRActionsListResponseSchema,
   IndexerB3TRAppIdSchema,
   IndexerGetB3TRActionsForAppParamsSchema,
@@ -79,7 +79,6 @@ export const getB3TRActionsForApp: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR actions for app: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR actions for app: ${String(error)}`)
     }
   },

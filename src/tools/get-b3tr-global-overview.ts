@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
@@ -57,7 +57,6 @@ export const getB3TRGlobalOverview: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: overview },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR global overview: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR global overview: ${String(error)}`)
     }
   },

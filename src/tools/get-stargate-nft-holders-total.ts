@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
@@ -47,7 +47,6 @@ export const getStargateNftHoldersTotal: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: parsed },
       }
     } catch (error) {
-      logger.warn(`Error fetching Stargate NFT holders total: ${String(error)}`)
       return indexerErrorResponse(`Error fetching Stargate NFT holders total: ${String(error)}`)
     }
   },

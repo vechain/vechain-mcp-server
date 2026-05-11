@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
-  IndexerB3TRAppLeaderboardEntrySchema,
+  type IndexerB3TRAppLeaderboardEntrySchema,
   IndexerB3TRAppsLeaderboardResponseSchema,
   refineRoundIdDateMutualExclusion,
 } from '@/services/veworld-indexer/schemas'
@@ -86,7 +86,6 @@ export const getB3TRAppsLeaderboard: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR apps leaderboard: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR apps leaderboard: ${String(error)}`)
     }
   },

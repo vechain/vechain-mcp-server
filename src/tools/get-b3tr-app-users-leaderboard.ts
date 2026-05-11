@@ -3,7 +3,7 @@ import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerB3TRAppIdSchema,
-  IndexerB3TRAppUserLeaderboardEntrySchema,
+  type IndexerB3TRAppUserLeaderboardEntrySchema,
   IndexerB3TRAppUsersLeaderboardResponseSchema,
   refineRoundIdDateMutualExclusion,
 } from '@/services/veworld-indexer/schemas'
@@ -106,7 +106,6 @@ export const getB3TRAppUsersLeaderboard: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching app users leaderboard: ${String(error)}`)
       return indexerErrorResponse(`Error fetching app users leaderboard: ${String(error)}`)
     }
   },
