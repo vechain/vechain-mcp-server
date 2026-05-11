@@ -198,7 +198,10 @@ class McpClient {
 // ---------------------------------------------------------------------------
 // Express app
 // ---------------------------------------------------------------------------
+import express from "express"
+import helmet from "helmet"
 const app = express()
+app.use(helmet())
 app.use(express.json())
 
 const mcpClient = new McpClient()
@@ -296,7 +299,7 @@ function sanitizeSchema(node: SchemaNode, root: SchemaNode): SchemaNode {
   }
 
   for (const key of Object.keys(obj)) {
-    obj[key] = sanitizeSchema(obj[key], root)
+    if (!["__proto__", "constructor", "prototype"].includes(key)) obj[key] = sanitizeSchema(obj[key], root)
   }
   return obj
 }
