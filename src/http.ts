@@ -198,7 +198,10 @@ class McpClient {
 // ---------------------------------------------------------------------------
 // Express app
 // ---------------------------------------------------------------------------
+import express from "express"
+import helmet from "helmet"
 const app = express()
+app.use(helmet())
 app.use(express.json())
 
 const mcpClient = new McpClient()
