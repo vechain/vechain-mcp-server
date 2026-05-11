@@ -52,9 +52,10 @@ export const getB3TRActionsForUser: MCPTool = {
         endPoint: `/api/v1/b3tr/actions/users/${walletAddress}`,
         params: {
           appId: parsed.appId,
-          // API expects milliseconds; user-facing schema accepts seconds → convert here
-          after: parsed.after != null ? parsed.after * 1000 : undefined,
-          before: parsed.before != null ? parsed.before * 1000 : undefined,
+          // Indexer expects Unix time in SECONDS (per /api-docs); the user-facing
+          // schema is also seconds, so pass through unchanged.
+          after: parsed.after,
+          before: parsed.before,
           page: parsed.page,
           size: parsed.size,
           direction: parsed.direction,
