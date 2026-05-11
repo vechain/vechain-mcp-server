@@ -3,6 +3,7 @@ import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
   IndexerB3TRGlobalOverviewSchema,
+  IndexerGetB3TRGlobalOverviewParamsBaseSchema,
   IndexerGetB3TRGlobalOverviewParamsSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -25,8 +26,8 @@ export const getB3TRGlobalOverview: MCPTool = {
   name: 'getB3TRGlobalOverview',
   title: 'B3TR: Global overview (totals)',
   description:
-    'Get global B3TR action overview via /api/v1/b3tr/actions/global/overview. Optionally filter by roundId or date (yyyy-MM-dd UTC).',
-  inputSchema: IndexerGetB3TRGlobalOverviewParamsSchema.shape,
+    'Get global B3TR action overview via /api/v1/b3tr/actions/global/overview. Optionally filter by roundId OR date (yyyy-MM-dd UTC), but not both — they are mutually exclusive.',
+  inputSchema: IndexerGetB3TRGlobalOverviewParamsBaseSchema.shape,
   outputSchema: IndexerB3TRGlobalOverviewOutputSchema.shape,
   annotations: {
     idempotentHint: true,

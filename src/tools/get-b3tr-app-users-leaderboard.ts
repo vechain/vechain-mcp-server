@@ -2,8 +2,10 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
+  IndexerB3TRAppIdSchema,
   IndexerB3TRAppUserLeaderboardEntrySchema,
   IndexerB3TRAppUsersLeaderboardResponseSchema,
+  refineRoundIdDateMutualExclusion,
 } from '@/services/veworld-indexer/schemas'
 import {
   createIndexerStructuredOutputSchema,
@@ -22,15 +24,17 @@ export const ResponseSchema = createIndexerToolResponseSchema(
 )
 export type GetB3TRAppUsersLeaderboardResponse = z.infer<typeof ResponseSchema>
 
-const InputSchema = z
+const InputBaseSchema = z
   .object({
-    appId: z.string().describe('App ID (veBetterDaoId) to query by'),
-    roundId: z.number().optional().describe('Optional round id to filter by'),
+    appId: IndexerB3TRAppIdSchema.describe(
+      'App ID (veBetterDaoId — 32-byte hex). If the user gives an app name, resolve it via getAppHubApps first.',
+    ),
+    roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
       .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
     size: z.number().optional().describe('The results page size'),
     direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
     sortBy: z
@@ -41,12 +45,14 @@ const InputSchema = z
   })
   .describe('Parameters for querying the B3TR users leaderboard for a specific app')
 
+const InputSchema = refineRoundIdDateMutualExclusion(InputBaseSchema)
+
 export const getB3TRAppUsersLeaderboard: MCPTool = {
   name: 'getB3TRAppUsersLeaderboard',
   title: 'B3TR: App users leaderboard',
   description:
     'Get user B3TR action leaderboard for a given app via /api/v1/b3tr/actions/leaderboards/apps/{appId}. Optionally filter by roundId or date; sort by totalRewardAmount or actionsRewarded; supports cursor pagination.',
-  inputSchema: InputSchema.shape,
+  inputSchema: InputBaseSchema.shape,
   outputSchema: OutputSchema.shape,
   annotations: {
     idempotentHint: true,

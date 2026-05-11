@@ -44,10 +44,15 @@ jest.mock('@/services/vns', () => ({
 // Now import after mocks are set up
 import { getB3TRActionsForApp } from '@/tools/get-b3tr-actions-for-app'
 import { getB3TRActionsForUser } from '@/tools/get-b3tr-actions-for-user'
-import { veworldIndexerGet } from '@/services/veworld-indexer'
+import { getB3TRAppOverview } from '@/tools/get-b3tr-app-overview'
+import { getB3TRGlobalOverview } from '@/tools/get-b3tr-global-overview'
+import { veworldIndexerGet, veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import { resolveVnsOrAddress } from '@/services/vns'
 
 const mockGet = veworldIndexerGet as jest.MockedFunction<typeof veworldIndexerGet>
+const mockGetSingle = veworldIndexerGetSingle as jest.MockedFunction<
+  typeof veworldIndexerGetSingle
+>
 const mockResolveVns = resolveVnsOrAddress as jest.MockedFunction<typeof resolveVnsOrAddress>
 
 /** A minimal valid B3TR actions list response from the indexer */
@@ -75,21 +80,21 @@ describe('getB3TRActionsForApp — InputSchema', () => {
   const schema = z.object((getB3TRActionsForApp as any).inputSchema)
 
   test('accepts valid appId without timestamps', () => {
-    expect(() => schema.parse({ appId: '0xabc' })).not.toThrow()
+    expect(() => schema.parse({ appId: '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a' })).not.toThrow()
   })
 
   test('accepts valid Unix second timestamps', () => {
     expect(() =>
-      schema.parse({ appId: '0xabc', after: 1754179200, before: 1754265600 }),
+      schema.parse({ appId: '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a', after: 1754179200, before: 1754265600 }),
     ).not.toThrow()
   })
 
   test('rejects negative after timestamp', () => {
-    expect(() => schema.parse({ appId: '0xabc', after: -1 })).toThrow()
+    expect(() => schema.parse({ appId: '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a', after: -1 })).toThrow()
   })
 
   test('rejects non-integer (float) after timestamp', () => {
-    expect(() => schema.parse({ appId: '0xabc', after: 1754179200.5 })).toThrow()
+    expect(() => schema.parse({ appId: '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a', after: 1754179200.5 })).toThrow()
   })
 
   test('rejects missing required appId', () => {
@@ -97,12 +102,12 @@ describe('getB3TRActionsForApp — InputSchema', () => {
   })
 
   test('accepts ASC and DESC direction', () => {
-    expect(() => schema.parse({ appId: '0xabc', direction: 'ASC' })).not.toThrow()
-    expect(() => schema.parse({ appId: '0xabc', direction: 'DESC' })).not.toThrow()
+    expect(() => schema.parse({ appId: '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a', direction: 'ASC' })).not.toThrow()
+    expect(() => schema.parse({ appId: '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a', direction: 'DESC' })).not.toThrow()
   })
 
   test('rejects invalid direction', () => {
-    expect(() => schema.parse({ appId: '0xabc', direction: 'asc' })).toThrow()
+    expect(() => schema.parse({ appId: '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a', direction: 'asc' })).toThrow()
   })
 
   test('after/before descriptions specify seconds, NOT milliseconds', () => {
@@ -342,5 +347,102 @@ describe('getB3TRActionsForUser — VNS resolution', () => {
     expect(result.structuredContent).toMatchObject({ ok: false })
     const errMsg = (result.structuredContent as any).error as string
     expect(errMsg).toContain('Unknown VNS name')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// appId schema validation — prevents the most common indexer 400s
+// (e.g. LLM forwarding "Mugshot" instead of the veBetterDaoId).
+// ---------------------------------------------------------------------------
+
+describe('IndexerB3TRAppIdSchema — appId format validation', () => {
+  const HEX_64 = '2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a'
+
+  test('rejects a human-readable app name with a helpful message', () => {
+    const schema = z.object((getB3TRActionsForApp as any).inputSchema)
+    expect(() => schema.parse({ appId: 'Mugshot' })).toThrow(/getAppHubApps/)
+  })
+
+  test('rejects a short hex value', () => {
+    const schema = z.object((getB3TRActionsForApp as any).inputSchema)
+    expect(() => schema.parse({ appId: '0xabc' })).toThrow(/32-byte hex/)
+  })
+
+  test('accepts a 0x-prefixed 64-char hex appId and forwards it untouched', async () => {
+    const APP_ID = `0x${HEX_64}`
+    await getB3TRActionsForApp.handler({ appId: APP_ID } as any)
+    const [callArg] = mockGet.mock.calls[0]
+    expect(callArg.endPoint).toBe(`/api/v1/b3tr/actions/apps/${APP_ID}`)
+  })
+
+  test('normalises a bare 64-char hex appId by prefixing 0x and lowercasing', async () => {
+    await getB3TRActionsForApp.handler({ appId: HEX_64.toUpperCase() } as any)
+    const [callArg] = mockGet.mock.calls[0]
+    // Stored on the URL path, not in params
+    expect(callArg.endPoint).toBe(`/api/v1/b3tr/actions/apps/0x${HEX_64}`)
+  })
+
+  test('also enforces format for the optional appId on getB3TRActionsForUser', () => {
+    const schema = z.object((getB3TRActionsForUser as any).inputSchema)
+    expect(() =>
+      schema.parse({
+        wallet: '0x311E811cd3fC29Ba17D45B04c882245FA69DC776',
+        appId: 'Mugshot',
+      }),
+    ).toThrow(/getAppHubApps/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// roundId × date mutual exclusion — overview/leaderboard endpoints reject
+// "roundId + date" with 400. We catch it at the tool boundary instead.
+// ---------------------------------------------------------------------------
+
+describe('refineRoundIdDateMutualExclusion — overview tools', () => {
+  const APP_ID = '0x2fc30c2ad41a2994061efaf218f1d52dc92bc4a31a0f02a4916490076a7a393a'
+
+  /** Minimal overview shape that satisfies the indexer response schemas. */
+  const MOCK_OVERVIEW: any = {
+    appId: APP_ID,
+    totalRewardAmount: 0,
+    actionsRewarded: 0,
+  }
+
+  beforeEach(() => {
+    mockGetSingle.mockResolvedValue(MOCK_OVERVIEW)
+  })
+
+  test('getB3TRAppOverview accepts roundId alone', async () => {
+    const result = await getB3TRAppOverview.handler({ appId: APP_ID, roundId: 10 } as any)
+    expect(result.structuredContent).toMatchObject({ ok: true })
+    expect(mockGetSingle).toHaveBeenCalledTimes(1)
+  })
+
+  test('getB3TRAppOverview accepts date alone', async () => {
+    const result = await getB3TRAppOverview.handler({ appId: APP_ID, date: '2025-08-03' } as any)
+    expect(result.structuredContent).toMatchObject({ ok: true })
+  })
+
+  test('getB3TRAppOverview rejects roundId + date with a clear error and skips the indexer call', async () => {
+    const result = await getB3TRAppOverview.handler({
+      appId: APP_ID,
+      roundId: 10,
+      date: '2025-08-03',
+    } as any)
+    expect(mockGetSingle).not.toHaveBeenCalled()
+    expect(result.structuredContent).toMatchObject({ ok: false })
+    const err = (result.structuredContent as any).error as string
+    expect(err).toMatch(/mutually exclusive/i)
+  })
+
+  test('getB3TRGlobalOverview enforces the same mutual exclusion (no appId on this endpoint)', async () => {
+    const result = await getB3TRGlobalOverview.handler({
+      roundId: 10,
+      date: '2025-08-03',
+    } as any)
+    expect(mockGetSingle).not.toHaveBeenCalled()
+    expect(result.structuredContent).toMatchObject({ ok: false })
+    const err = (result.structuredContent as any).error as string
+    expect(err).toMatch(/mutually exclusive/i)
   })
 })

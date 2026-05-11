@@ -4,6 +4,7 @@ import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerB3TRActionSchema,
   IndexerB3TRActionsListResponseSchema,
+  IndexerB3TRAppIdSchema,
   IndexerGetB3TRActionsForAppParamsSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -20,7 +21,9 @@ export type GetB3TRActionsForAppResponse = z.infer<typeof ResponseSchema>
 
 const InputSchema = z
   .object({
-    appId: z.string().describe('veBetterDaoId of the app (required)'),
+    appId: IndexerB3TRAppIdSchema.describe(
+      'veBetterDaoId of the app (32-byte hex, required). If the user gives a human-readable app name (e.g. "Mugshot"), call getAppHubApps first to resolve the veBetterDaoId.',
+    ),
     after: z.number().int().nonnegative().optional().describe('Return actions after (inclusive) this Unix timestamp in seconds (e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
     before: z.number().int().nonnegative().optional().describe('Return actions before (inclusive) this Unix timestamp in seconds (e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
     page: z.number().optional(),
