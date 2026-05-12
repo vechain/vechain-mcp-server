@@ -19,6 +19,33 @@ export const VEBETTERDAO_CONTRACTS = {
 } as const
 
 /**
+ * Network-aware VeBetterDAO contract addresses.
+ * Source: vebetterdao frontend `packages/config/{mainnet,testnet}.ts`.
+ */
+export const VEBETTERDAO_NETWORK_ADDRESSES = {
+  mainnet: {
+    x2EarnApps: '0x8392B7CCc763dB03b47afcD8E8f5e24F9cf0554D',
+    xAllocationVoting: '0x89A00Bb0947a30FF95BEeF77a66AEdE3842Fe5B7',
+  },
+  testnet: {
+    x2EarnApps: '0x1ae6eee231bcf8229d42626b4d663d45a6abd889',
+    xAllocationVoting: '0xe3c043786e991bd446be5242e79dff757fbda348',
+  },
+} as const
+
+export type VeBetterDaoNetwork = keyof typeof VEBETTERDAO_NETWORK_ADDRESSES
+
+export function getVeBetterDaoContractAddresses(): {
+  network: VeBetterDaoNetwork
+  x2EarnApps: string
+  xAllocationVoting: string
+} {
+  const net = getThorNetworkType()
+  const network: VeBetterDaoNetwork = net === 'testnet' ? 'testnet' : 'mainnet'
+  return { network, ...VEBETTERDAO_NETWORK_ADDRESSES[network] }
+}
+
+/**
  * Re-export getThorNetworkType as getNetworkType for backwards compatibility
  */
 export const getNetworkType = getThorNetworkType
@@ -129,7 +156,7 @@ export async function getTokenBalance(params: {
   }
 }
 
-// X Allocation Voting ABI
+// X Allocation Voting ABI (subset used by getCurrentRound)
 const X_ALLOCATION_VOTING_ABI = [
   {
     name: 'currentRoundId',
@@ -139,6 +166,259 @@ const X_ALLOCATION_VOTING_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
   },
 ] as const satisfies Abi
+
+/**
+ * Full X Allocation Voting view ABI used by the apps tool.
+ */
+export const X_ALLOCATION_VOTING_VIEW_ABI = [
+  {
+    name: 'currentRoundId',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'getAppIdsOfRound',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'roundId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'bytes32[]' }],
+  },
+  {
+    name: 'roundSnapshot',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'roundId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'roundDeadline',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'roundId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+] as const satisfies Abi
+
+/**
+ * X2EarnApps view ABI (subset needed to enumerate apps + status + roles).
+ */
+export const X2EARN_APPS_VIEW_ABI = [
+  {
+    name: 'apps',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [
+      {
+        type: 'tuple[]',
+        name: '',
+        components: [
+          { name: 'id', type: 'bytes32' },
+          { name: 'teamWalletAddress', type: 'address' },
+          { name: 'name', type: 'string' },
+          { name: 'metadataURI', type: 'string' },
+          { name: 'createdAtTimestamp', type: 'uint256' },
+          { name: 'appAvailableForAllocationVoting', type: 'bool' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'unendorsedApps',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [
+      {
+        type: 'tuple[]',
+        name: '',
+        components: [
+          { name: 'id', type: 'bytes32' },
+          { name: 'teamWalletAddress', type: 'address' },
+          { name: 'name', type: 'string' },
+          { name: 'metadataURI', type: 'string' },
+          { name: 'createdAtTimestamp', type: 'uint256' },
+          { name: 'appAvailableForAllocationVoting', type: 'bool' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'baseURI',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'string' }],
+  },
+  {
+    name: 'endorsementScoreThreshold',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'gracePeriod',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'cooldownPeriod',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'endorsementsPaused',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'app',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [
+      {
+        type: 'tuple',
+        name: '',
+        components: [
+          { name: 'id', type: 'bytes32' },
+          { name: 'teamWalletAddress', type: 'address' },
+          { name: 'name', type: 'string' },
+          { name: 'metadataURI', type: 'string' },
+          { name: 'createdAtTimestamp', type: 'uint256' },
+          { name: 'appAvailableForAllocationVoting', type: 'bool' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'appExists',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'appAdmin',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'address' }],
+  },
+  {
+    name: 'appModerators',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'address[]' }],
+  },
+  {
+    name: 'appCreators',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'address[]' }],
+  },
+  {
+    name: 'rewardDistributors',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'address[]' }],
+  },
+  {
+    name: 'isBlacklisted',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'isAppUnendorsed',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'isEligibleNow',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'getScore',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'getEndorsers',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'appId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'address[]' }],
+  },
+] as const satisfies Abi
+
+/**
+ * Single clause for `POST /accounts/*` (Thor inspect-clauses multicall).
+ */
+export type ThorClause = { to: string; value?: string; data: string }
+
+export type InspectClauseResult = {
+  data: string
+  reverted: boolean
+  vmError?: string
+}
+
+/**
+ * Execute multiple read-only clauses in a single Thor `POST /accounts/*` request.
+ * Returns one result entry per clause, in order. Clauses are sent in chunks
+ * to keep request body sizes reasonable.
+ */
+export async function inspectClauses(
+  clauses: ThorClause[],
+  chunkSize = 50,
+): Promise<InspectClauseResult[] | null> {
+  if (clauses.length === 0) return []
+  try {
+    const baseUrl = getThorNodeUrl()
+    const url = `${baseUrl}/accounts/*`
+    const out: InspectClauseResult[] = []
+    for (let i = 0; i < clauses.length; i += chunkSize) {
+      const chunk = clauses.slice(i, i + chunkSize)
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clauses: chunk.map(c => ({ to: c.to, value: c.value ?? '0x0', data: c.data })),
+        }),
+      })
+      if (!res.ok) {
+        logger.warn(`inspectClauses chunk failed: ${res.status} ${res.statusText}`)
+        return null
+      }
+      const json = (await res.json()) as InspectClauseResult[]
+      out.push(...json)
+    }
+    return out
+  } catch (error) {
+    logger.warn(`Error in inspectClauses: ${String(error)}`)
+    return null
+  }
+}
 
 /**
  * Get current round ID from X Allocation Voting contract
@@ -303,4 +583,3 @@ export async function getGMNFTLevel(address: string): Promise<{
     return null
   }
 }
-
