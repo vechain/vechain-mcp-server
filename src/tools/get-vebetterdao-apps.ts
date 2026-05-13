@@ -232,10 +232,10 @@ export const getVeBetterDaoApps: MCPTool = {
         }
       }
 
-      let universe = Array.from(byId.values())
+      let appsToProcess = Array.from(byId.values())
       if (parsed.appId) {
         const target = parsed.appId.toLowerCase()
-        universe = universe.filter(a => a.id.toLowerCase() === target)
+        appsToProcess = appsToProcess.filter(a => a.id.toLowerCase() === target)
       }
 
       // ---------- Step 2: current-round app ids ----------
@@ -247,11 +247,11 @@ export const getVeBetterDaoApps: MCPTool = {
       }
 
       if (parsed.onlyActiveInCurrentRound) {
-        universe = universe.filter(a => activeRoundIds.has(a.id.toLowerCase()))
+        appsToProcess = appsToProcess.filter(a => activeRoundIds.has(a.id.toLowerCase()))
       }
 
       // ---------- Step 3: per-app multicall for status + roles ----------
-      const perAppClauses: ContractClause[] = universe.flatMap(app => {
+      const perAppClauses: ContractClause[] = appsToProcess.flatMap(app => {
         const c: ContractClause[] = [
           x2EarnAppsContract.clause.isBlacklisted(app.id),
           x2EarnAppsContract.clause.isAppUnendorsed(app.id),
@@ -275,7 +275,7 @@ export const getVeBetterDaoApps: MCPTool = {
       const perAppResults = (await executeMulticall(perAppClauses)) ?? []
 
       // ---------- Step 4: IPFS metadata (concurrent) ----------
-      const metadataUrls = universe.map(a => resolveMetadataUrl(baseURI, a.metadataURI))
+      const metadataUrls = appsToProcess.map(a => resolveMetadataUrl(baseURI, a.metadataURI))
       const metadataObjs: (z.infer<typeof XAppMetadataSchema> | null)[] = needsMetadata
         ? await mapWithConcurrency(metadataUrls, parsed.metadataConcurrency, async url => {
             if (!url) return null
@@ -284,10 +284,10 @@ export const getVeBetterDaoApps: MCPTool = {
             const parsedMeta = XAppMetadataSchema.safeParse(raw)
             return parsedMeta.success ? parsedMeta.data : (raw as z.infer<typeof XAppMetadataSchema>)
           })
-        : universe.map(() => null)
+        : appsToProcess.map(() => null)
 
       // ---------- Step 5: assemble output ----------
-      const allApps = universe.map((app, i) => {
+      const allApps = appsToProcess.map((app, i) => {
         const base = i * stride
         const idLc = app.id.toLowerCase()
 
