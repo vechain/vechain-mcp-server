@@ -1,0 +1,43 @@
+---
+description: Code organization conventions for src/ folder
+alwaysApply: true
+---
+
+# Code Organization
+
+Keep `src/` organized by purpose. Place new files in the correct folder.
+
+## `src/utils/`
+
+Generic, stateless helpers with no domain knowledge. Reusable across the codebase and easy to unit-test in isolation.
+
+Examples: `fetch.ts`, `logger.ts`, `concurrency.ts`.
+
+Put here:
+- Pure functions and small helpers (formatting, parsing, retries, batching, concurrency primitives)
+- Cross-cutting infrastructure (logger, generic HTTP wrappers)
+- Anything that does NOT depend on a specific VeChain/VeBetterDAO domain concept
+
+## `src/services/`
+
+Domain-specific modules that integrate with an external system, contract, API, or business concept. May hold configuration, clients, or stateful wrappers.
+
+Examples: `vebetterdao-contracts.ts`, `ipfs.ts`, `vns.ts`, `price-oracle.ts`, `thor/`, `token-registry/`, `validator-hub/`.
+
+Put here:
+- Smart contract clients and ABIs wrappers
+- API clients for a specific service (IPFS, indexers, oracles, registries)
+- Anything tied to a domain concept (VNS, B3TR, VeBetterDAO apps, Thor node)
+
+If a service grows, promote it to a subfolder (e.g. `services/thor/`).
+
+## Quick decision
+
+- "Could this live in any TypeScript project unchanged?" -> `utils/`
+- "Does this know about VeChain, a contract, or an external API?" -> `services/`
+
+## Do not
+
+- Do NOT place helpers next to `tools/` or at the root of `src/`
+- Do NOT mix domain logic into `utils/`
+- Do NOT duplicate helpers — check `utils/` and `services/` first before adding a new file
