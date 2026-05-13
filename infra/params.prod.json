@@ -1,0 +1,16 @@
+[
+  {"ParameterKey": "EnvironmentName",   "ParameterValue": "prod"},
+  {"ParameterKey": "ServiceName",       "ParameterValue": "mcp-server"},
+  {"ParameterKey": "ContainerImage",    "ParameterValue": "REPLACE_AT_DEPLOY_TIME"},
+  {"ParameterKey": "ContainerPort",     "ParameterValue": "{{resolve:ssm:/mcp/server/port}}"},
+  {"ParameterKey": "TaskCpu",           "ParameterValue": "{{resolve:ssm:/mcp/server/cpu}}"},
+  {"ParameterKey": "TaskMemory",        "ParameterValue": "{{resolve:ssm:/mcp/server/memory}}"},
+  {"ParameterKey": "TaskRoleArn",       "ParameterValue": "{{resolve:ssm:/mcp/server/task-role-arn}}"},
+  {"ParameterKey": "ExecutionRoleArn",  "ParameterValue": "{{resolve:ssm:/mcp/server/execution-role-arn}}"},
+  {"ParameterKey": "ClusterArn",        "ParameterValue": "{{resolve:ssm:/mcp/server/cluster-arn}}"},
+  {"ParameterKey": "SubnetIds",         "ParameterValue": "{{resolve:ssm:/mcp/server/subnet-ids}}"},
+  {"ParameterKey": "SecurityGroupIds",  "ParameterValue": "{{resolve:ssm:/mcp/server/security-group-ids}}"},
+  {"ParameterKey": "TargetGroupArn",    "ParameterValue": "{{resolve:ssm:/mcp/server/target-group-arn}}"},
+  {"ParameterKey": "LogGroupName",      "ParameterValue": "{{resolve:ssm:/mcp/server/log-group-name}}"},
+  {"ParameterKey": "DesiredCount",      "ParameterValue": "{{resolve:ssm:/mcp/server/desired-count}}"}
+]

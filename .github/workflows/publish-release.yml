@@ -10,6 +10,10 @@ permissions:
   packages: write
   id-token: write
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -91,10 +95,46 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-docker:
+  # Push the image to the dev environment's ECR first. Doing this before
+  # the prod ECR push (and the dev deploy) ensures the image is available
+  # by the time deploy-dev runs.
+  publish-image-dev:
     uses: ./.github/workflows/publish-image.yml
     with:
       image_tag: ${{ github.ref_name }}
       set_latest: true
+      environment: dev
+    secrets: inherit
+
+  # Push to the prod ECR in parallel with the dev rollout — the prod
+  # rollout itself is gated by environment protection rules, so the prod
+  # image will be ready well before the prod deploy is approved.
+  publish-image-prod:
+    needs: [publish-image-dev]
+    uses: ./.github/workflows/publish-image.yml
+    with:
+      image_tag: ${{ github.ref_name }}
+      set_latest: true
+      environment: prod
+    secrets: inherit
+
+  # Roll out the just-published image to the dev environment. No approval
+  # gate; the `dev` GitHub environment has no protection rules.
+  deploy-dev:
+    needs: [publish-image-dev]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      image_tag: ${{ github.ref_name }}
+      environment: dev
+    secrets: inherit
+
+  # Roll out to prod only after dev has succeeded AND a reviewer approves.
+  # The approval gate is enforced by the `prod` GitHub environment's
+  # protection rules (required_reviewers), not by the workflow.
+  deploy-prod:
+    needs: [deploy-dev, publish-image-prod]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      image_tag: ${{ github.ref_name }}
       environment: prod
     secrets: inherit

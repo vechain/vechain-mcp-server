@@ -370,6 +370,22 @@ npm run format  # Format code with Biome
 npm run lint    # Lint and fix issues with Biome
 ```
 
+## Releases
+
+Releases are driven by git tags. Pushing a tag triggers a single
+pipeline (`.github/workflows/publish-release.yml`) that:
+
+1. Publishes the npm package to npmjs.org and to GitHub Packages.
+2. Builds a multi-arch Docker image and pushes it to the dev and prod
+   container registries.
+3. Rolls the new image out to the **dev** environment automatically.
+4. Pauses on a manual approval step before rolling out to **prod**
+   (enforced by GitHub environment protection rules).
+
+Infrastructure for the runtime service lives in [`infra/`](./infra/) as
+a CloudFormation template; see that directory's README for details on
+how to deploy or update the stack shape.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
