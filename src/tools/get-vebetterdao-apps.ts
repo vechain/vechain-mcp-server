@@ -1,17 +1,18 @@
+import type { ContractClause } from '@vechain/sdk-core'
 import { z } from 'zod'
-import { encodeFunctionData, decodeFunctionResult } from 'viem'
+import { ipfsToHttp, resolveMetadataUrl } from '@/services/ipfs'
 import { getThorNetworkType } from '@/services/thor'
 import {
-  X2EARN_APPS_VIEW_ABI,
-  X_ALLOCATION_VOTING_VIEW_ABI,
+  executeMulticall,
   getVeBetterDaoContractAddresses,
-  inspectClauses,
-  type InspectClauseResult,
+  getX2EarnAppsContract,
+  getXAllocationVotingContract,
+  unwrapPlain,
 } from '@/services/vebetterdao-contracts'
 import type { MCPTool } from '@/types'
+import { mapWithConcurrency } from '@/utils/concurrency'
+import { fetchJson } from '@/utils/fetch'
 import { logger } from '@/utils/logger'
-
-const IPFS_GATEWAY = 'https://api.gateway-proxy.vechain.org/ipfs'
 
 const SocialUrlSchema = z.object({ name: z.string(), url: z.string() })
 const AppUrlSchema = z.object({ code: z.string(), url: z.string() })
@@ -47,28 +48,16 @@ const RolesSchema = z.object({
 })
 
 const StatusSchema = z.object({
-  appAvailableForAllocationVoting: z
-    .boolean()
-    .describe('On-chain flag from the App tuple'),
+  appAvailableForAllocationVoting: z.boolean().describe('On-chain flag from the App tuple'),
   isBlacklisted: z.boolean(),
-  isUnendorsed: z
-    .boolean()
-    .describe('True if the app lost endorsement and is in grace period'),
-  isEligibleNow: z
-    .boolean()
-    .describe('True if currently eligible for receiving votes'),
+  isUnendorsed: z.boolean().describe('True if the app lost endorsement and is in grace period'),
+  isEligibleNow: z.boolean().describe('True if currently eligible for receiving votes'),
   isActiveInCurrentRound: z
     .boolean()
     .describe('True if the appId is in XAllocationVoting.getAppIdsOfRound(currentRoundId)'),
-  endorsementScore: z
-    .string()
-    .describe('Total endorsement points (uint256 as decimal string)'),
-  endorsementScoreThreshold: z
-    .string()
-    .describe('Min endorsement points to be considered endorsed'),
-  isEndorsed: z
-    .boolean()
-    .describe('Derived: score >= threshold AND not blacklisted AND not unendorsed'),
+  endorsementScore: z.string().describe('Total endorsement points (uint256 as decimal string)'),
+  endorsementScoreThreshold: z.string().describe('Min endorsement points to be considered endorsed'),
+  isEndorsed: z.boolean().describe('Derived: score >= threshold AND not blacklisted AND not unendorsed'),
 })
 
 const AppSchema = z.object({
@@ -149,6 +138,12 @@ const InputSchema = z
       .optional()
       .default(false)
       .describe('Return only apps included in the current round of voting'),
+    categories: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Optional array of category ids to filter apps by (case-insensitive, OR semantics). Categories live in the IPFS metadata, so includeMetadata is forced to true when this is set. Known mainnet categories: nutrition, plastic-waste-recycling, fitness-wellness, renewable-energy-efficiency, sustainable-shopping, green-mobility-travel, pets, education-learning, green-finance-defi, others (deprecated: social-community-activism, carbon-footprint).',
+      ),
     metadataConcurrency: z
       .number()
       .int()
@@ -175,79 +170,11 @@ type AppTuple = {
   appAvailableForAllocationVoting: boolean
 }
 
-function ipfsToHttp(uri: string | undefined | null): string | null {
-  if (!uri) return null
-  if (uri.startsWith('ipfs://')) {
-    return `${IPFS_GATEWAY}/${uri.slice('ipfs://'.length)}`
-  }
-  if (uri.startsWith('http://') || uri.startsWith('https://')) return uri
-  return `${IPFS_GATEWAY}/${uri.replace(/^\/+/, '')}`
-}
-
-function resolveMetadataUrl(baseURI: string, metadataURI: string): string | null {
-  if (!metadataURI) return null
-  if (metadataURI.startsWith('ipfs://') || metadataURI.startsWith('http')) {
-    return ipfsToHttp(metadataURI)
-  }
-  const base = baseURI ?? ''
-  const sep = base.endsWith('/') || metadataURI.startsWith('/') ? '' : '/'
-  return ipfsToHttp(`${base}${sep}${metadataURI}`)
-}
-
-function decodeOrNull<TOut>(
-  result: InspectClauseResult | undefined,
-  decoder: () => TOut,
-): TOut | null {
-  if (!result || result.reverted || !result.data || result.data === '0x') return null
-  try {
-    return decoder()
-  } catch (e) {
-    logger.debug(`decode failed: ${String(e)}`)
-    return null
-  }
-}
-
-async function fetchJson(url: string): Promise<unknown | null> {
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json, text/plain, */*' },
-    })
-    if (!res.ok) return null
-    const text = await res.text()
-    try {
-      return JSON.parse(text)
-    } catch {
-      return null
-    }
-  } catch {
-    return null
-  }
-}
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const out: R[] = new Array(items.length)
-  let i = 0
-  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
-    while (true) {
-      const idx = i++
-      if (idx >= items.length) return
-      out[idx] = await fn(items[idx], idx)
-    }
-  })
-  await Promise.all(workers)
-  return out
-}
-
 export const getVeBetterDaoApps: MCPTool = {
   name: 'getVeBetterDaoApps',
   title: 'VeBetterDAO: list xApps with on-chain status, roles and IPFS metadata',
   description:
-    'List VeBetterDAO xApps directly from the on-chain X2EarnApps registry. For each app returns: id, on-chain name, owner (teamWalletAddress), createdAtTimestamp, roles (admin, moderators, creators, rewardDistributors), endorsement status (isEndorsed, endorsementScore vs threshold, isUnendorsed/grace period, isBlacklisted, isEligibleNow), whether the app is active in the current XAllocationVoting round, and IPFS metadata (description, website, logo, banner, social links, categories, distribution_strategy). Supports filtering to a single appId or to apps active in the current round. Uses Thor `POST /accounts/*` multicall for efficiency.',
+    'List VeBetterDAO xApps directly from the on-chain X2EarnApps registry. For each app returns: id, on-chain name, owner (teamWalletAddress), createdAtTimestamp, roles (admin, moderators, creators, rewardDistributors), endorsement status (isEndorsed, endorsementScore vs threshold, isUnendorsed/grace period, isBlacklisted, isEligibleNow), whether the app is active in the current XAllocationVoting round, and IPFS metadata (description, website, logo, banner, social links, categories, distribution_strategy). Supports filtering to a single appId, to apps active in the current round, and by category (array of category ids, case-insensitive, OR semantics — sourced from IPFS metadata). Uses the VeChain SDK multicall for efficiency.',
   inputSchema: InputSchema.shape,
   outputSchema: OutputSchema.shape,
   annotations: {
@@ -260,120 +187,40 @@ export const getVeBetterDaoApps: MCPTool = {
     const network = getThorNetworkType()
     try {
       const parsed = InputSchema.parse(params ?? {})
+      const categoryFilter =
+        parsed.categories && parsed.categories.length > 0 ? new Set(parsed.categories.map(c => c.toLowerCase())) : null
+      // Categories live in IPFS metadata: force the fetch when a category filter is active
+      const needsMetadata = parsed.includeMetadata || categoryFilter !== null
+
       const { x2EarnApps, xAllocationVoting } = getVeBetterDaoContractAddresses()
+      const x2EarnAppsContract = getX2EarnAppsContract()
+      const xAllocationVotingContract = getXAllocationVotingContract()
 
       // ---------- Step 1: global config + apps lists + current round ----------
-      const globalClauses = [
-        {
-          to: x2EarnApps,
-          data: encodeFunctionData({ abi: X2EARN_APPS_VIEW_ABI, functionName: 'apps' }),
-        },
-        {
-          to: x2EarnApps,
-          data: encodeFunctionData({ abi: X2EARN_APPS_VIEW_ABI, functionName: 'unendorsedApps' }),
-        },
-        {
-          to: x2EarnApps,
-          data: encodeFunctionData({ abi: X2EARN_APPS_VIEW_ABI, functionName: 'baseURI' }),
-        },
-        {
-          to: x2EarnApps,
-          data: encodeFunctionData({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'endorsementScoreThreshold',
-          }),
-        },
-        {
-          to: x2EarnApps,
-          data: encodeFunctionData({ abi: X2EARN_APPS_VIEW_ABI, functionName: 'gracePeriod' }),
-        },
-        {
-          to: x2EarnApps,
-          data: encodeFunctionData({ abi: X2EARN_APPS_VIEW_ABI, functionName: 'cooldownPeriod' }),
-        },
-        {
-          to: x2EarnApps,
-          data: encodeFunctionData({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'endorsementsPaused',
-          }),
-        },
-        {
-          to: xAllocationVoting,
-          data: encodeFunctionData({
-            abi: X_ALLOCATION_VOTING_VIEW_ABI,
-            functionName: 'currentRoundId',
-          }),
-        },
+      const globalClauses: ContractClause[] = [
+        x2EarnAppsContract.clause.apps(),
+        x2EarnAppsContract.clause.unendorsedApps(),
+        x2EarnAppsContract.clause.baseURI(),
+        x2EarnAppsContract.clause.endorsementScoreThreshold(),
+        x2EarnAppsContract.clause.gracePeriod(),
+        x2EarnAppsContract.clause.cooldownPeriod(),
+        x2EarnAppsContract.clause.endorsementsPaused(),
+        xAllocationVotingContract.clause.currentRoundId(),
       ]
-      const globalResults = await inspectClauses(globalClauses)
+      const globalResults = await executeMulticall(globalClauses)
       if (!globalResults) {
         return errorResp('Failed to fetch VeBetterDAO global state')
       }
 
-      const endorsedApps =
-        decodeOrNull<readonly AppTuple[]>(globalResults[0], () =>
-          decodeFunctionResult({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'apps',
-            data: globalResults[0].data as `0x${string}`,
-          }) as unknown as readonly AppTuple[],
-        ) ?? []
-      const unendorsedAppsList =
-        decodeOrNull<readonly AppTuple[]>(globalResults[1], () =>
-          decodeFunctionResult({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'unendorsedApps',
-            data: globalResults[1].data as `0x${string}`,
-          }) as unknown as readonly AppTuple[],
-        ) ?? []
-      const baseURI =
-        decodeOrNull<string>(globalResults[2], () =>
-          decodeFunctionResult({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'baseURI',
-            data: globalResults[2].data as `0x${string}`,
-          }) as unknown as string,
-        ) ?? ''
-      const endorsementScoreThreshold =
-        decodeOrNull<bigint>(globalResults[3], () =>
-          decodeFunctionResult({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'endorsementScoreThreshold',
-            data: globalResults[3].data as `0x${string}`,
-          }) as unknown as bigint,
-        ) ?? 0n
-      const gracePeriod =
-        decodeOrNull<bigint>(globalResults[4], () =>
-          decodeFunctionResult({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'gracePeriod',
-            data: globalResults[4].data as `0x${string}`,
-          }) as unknown as bigint,
-        ) ?? 0n
-      const cooldownPeriod =
-        decodeOrNull<bigint>(globalResults[5], () =>
-          decodeFunctionResult({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'cooldownPeriod',
-            data: globalResults[5].data as `0x${string}`,
-          }) as unknown as bigint,
-        ) ?? 0n
-      const endorsementsPaused =
-        decodeOrNull<boolean>(globalResults[6], () =>
-          decodeFunctionResult({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: 'endorsementsPaused',
-            data: globalResults[6].data as `0x${string}`,
-          }) as unknown as boolean,
-        ) ?? false
-      const currentRoundId = decodeOrNull<bigint>(globalResults[7], () =>
-        decodeFunctionResult({
-          abi: X_ALLOCATION_VOTING_VIEW_ABI,
-          functionName: 'currentRoundId',
-          data: globalResults[7].data as `0x${string}`,
-        }) as unknown as bigint,
-      )
+      const endorsedApps = unwrapPlain<readonly AppTuple[]>(globalResults[0], [])
+      const unendorsedAppsList = unwrapPlain<readonly AppTuple[]>(globalResults[1], [])
+      const baseURI = unwrapPlain<string>(globalResults[2], '')
+      const endorsementScoreThreshold = unwrapPlain<bigint>(globalResults[3], 0n)
+      const gracePeriod = unwrapPlain<bigint>(globalResults[4], 0n)
+      const cooldownPeriod = unwrapPlain<bigint>(globalResults[5], 0n)
+      const endorsementsPaused = unwrapPlain<boolean>(globalResults[6], false)
+      const currentRoundResult = globalResults[7]
+      const currentRoundId = currentRoundResult?.success ? (currentRoundResult.result.plain as bigint) : null
 
       // Combine endorsed + (optionally) unendorsed; dedupe by id
       const byId = new Map<string, AppTuple>()
@@ -385,7 +232,6 @@ export const getVeBetterDaoApps: MCPTool = {
         }
       }
 
-      // Filter to a single appId if requested
       let universe = Array.from(byId.values())
       if (parsed.appId) {
         const target = parsed.appId.toLowerCase()
@@ -395,25 +241,8 @@ export const getVeBetterDaoApps: MCPTool = {
       // ---------- Step 2: current-round app ids ----------
       let activeRoundIds = new Set<string>()
       if (currentRoundId !== null) {
-        const roundResults = await inspectClauses([
-          {
-            to: xAllocationVoting,
-            data: encodeFunctionData({
-              abi: X_ALLOCATION_VOTING_VIEW_ABI,
-              functionName: 'getAppIdsOfRound',
-              args: [currentRoundId],
-            }),
-          },
-        ])
-        const ids = roundResults
-          ? decodeOrNull<readonly `0x${string}`[]>(roundResults[0], () =>
-              decodeFunctionResult({
-                abi: X_ALLOCATION_VOTING_VIEW_ABI,
-                functionName: 'getAppIdsOfRound',
-                data: roundResults[0].data as `0x${string}`,
-              }) as unknown as readonly `0x${string}`[],
-            )
-          : null
+        const roundResults = await executeMulticall([xAllocationVotingContract.clause.getAppIdsOfRound(currentRoundId)])
+        const ids = roundResults ? unwrapPlain<readonly `0x${string}`[] | null>(roundResults[0], null) : null
         if (ids) activeRoundIds = new Set(ids.map(x => x.toLowerCase()))
       }
 
@@ -422,39 +251,32 @@ export const getVeBetterDaoApps: MCPTool = {
       }
 
       // ---------- Step 3: per-app multicall for status + roles ----------
-      type PerAppCall =
-        | 'isBlacklisted'
-        | 'isAppUnendorsed'
-        | 'isEligibleNow'
-        | 'getScore'
-        | 'appAdmin'
-        | 'appModerators'
-        | 'appCreators'
-        | 'rewardDistributors'
-        | 'getEndorsers'
-
-      const perAppFns: PerAppCall[] = ['isBlacklisted', 'isAppUnendorsed', 'isEligibleNow', 'getScore']
-      if (parsed.includeRoles) {
-        perAppFns.push('appAdmin', 'appModerators', 'appCreators', 'rewardDistributors')
-      }
-      if (parsed.includeEndorsers) perAppFns.push('getEndorsers')
-
-      const perAppClauses = universe.flatMap(app =>
-        perAppFns.map(fn => ({
-          to: x2EarnApps,
-          data: encodeFunctionData({
-            abi: X2EARN_APPS_VIEW_ABI,
-            functionName: fn,
-            args: [app.id],
-          }),
-        })),
-      )
-
-      const perAppResults = (await inspectClauses(perAppClauses)) ?? []
+      const perAppClauses: ContractClause[] = universe.flatMap(app => {
+        const c: ContractClause[] = [
+          x2EarnAppsContract.clause.isBlacklisted(app.id),
+          x2EarnAppsContract.clause.isAppUnendorsed(app.id),
+          x2EarnAppsContract.clause.isEligibleNow(app.id),
+          x2EarnAppsContract.clause.getScore(app.id),
+        ]
+        if (parsed.includeRoles) {
+          c.push(
+            x2EarnAppsContract.clause.appAdmin(app.id),
+            x2EarnAppsContract.clause.appModerators(app.id),
+            x2EarnAppsContract.clause.appCreators(app.id),
+            x2EarnAppsContract.clause.rewardDistributors(app.id),
+          )
+        }
+        if (parsed.includeEndorsers) {
+          c.push(x2EarnAppsContract.clause.getEndorsers(app.id))
+        }
+        return c
+      })
+      const stride = 4 + (parsed.includeRoles ? 4 : 0) + (parsed.includeEndorsers ? 1 : 0)
+      const perAppResults = (await executeMulticall(perAppClauses)) ?? []
 
       // ---------- Step 4: IPFS metadata (concurrent) ----------
       const metadataUrls = universe.map(a => resolveMetadataUrl(baseURI, a.metadataURI))
-      const metadataObjs: (z.infer<typeof XAppMetadataSchema> | null)[] = parsed.includeMetadata
+      const metadataObjs: (z.infer<typeof XAppMetadataSchema> | null)[] = needsMetadata
         ? await mapWithConcurrency(metadataUrls, parsed.metadataConcurrency, async url => {
             if (!url) return null
             const raw = await fetchJson(url)
@@ -465,55 +287,34 @@ export const getVeBetterDaoApps: MCPTool = {
         : universe.map(() => null)
 
       // ---------- Step 5: assemble output ----------
-      const apps = universe.map((app, i) => {
-        const base = i * perAppFns.length
+      const allApps = universe.map((app, i) => {
+        const base = i * stride
         const idLc = app.id.toLowerCase()
 
-        let isBlacklisted = false
-        let isUnendorsed = false
-        let isEligibleNow = false
-        let endorsementScore = 0n
+        let offset = 0
+        const isBlacklisted = unwrapPlain<boolean>(perAppResults[base + offset++], false)
+        const isUnendorsed = unwrapPlain<boolean>(perAppResults[base + offset++], false)
+        const isEligibleNow = unwrapPlain<boolean>(perAppResults[base + offset++], false)
+        const endorsementScore = unwrapPlain<bigint>(perAppResults[base + offset++], 0n)
+
         let admin: string | null = null
         let moderators: string[] = []
         let creators: string[] = []
         let rewardDistributors: string[] = []
         let endorsers: string[] | undefined
 
-        const decode = <TOut>(offset: number, fn: PerAppCall, fallback: TOut): TOut => {
-          const r = perAppResults[base + offset]
-          return (
-            decodeOrNull<TOut>(r, () =>
-              decodeFunctionResult({
-                abi: X2EARN_APPS_VIEW_ABI,
-                functionName: fn,
-                data: r.data as `0x${string}`,
-              }) as unknown as TOut,
-            ) ?? fallback
-          )
-        }
-
-        let offset = 0
-        isBlacklisted = decode(offset++, 'isBlacklisted', false)
-        isUnendorsed = decode(offset++, 'isAppUnendorsed', false)
-        isEligibleNow = decode(offset++, 'isEligibleNow', false)
-        endorsementScore = decode<bigint>(offset++, 'getScore', 0n)
         if (parsed.includeRoles) {
-          admin = decode<string | null>(offset++, 'appAdmin', null)
-          moderators = decode<readonly string[]>(offset++, 'appModerators', []).slice() as string[]
-          creators = decode<readonly string[]>(offset++, 'appCreators', []).slice() as string[]
-          rewardDistributors = decode<readonly string[]>(
-            offset++,
-            'rewardDistributors',
-            [],
-          ).slice() as string[]
+          admin = unwrapPlain<string | null>(perAppResults[base + offset++], null)
+          moderators = [...unwrapPlain<readonly string[]>(perAppResults[base + offset++], [])]
+          creators = [...unwrapPlain<readonly string[]>(perAppResults[base + offset++], [])]
+          rewardDistributors = [...unwrapPlain<readonly string[]>(perAppResults[base + offset++], [])]
         }
         if (parsed.includeEndorsers) {
-          endorsers = decode<readonly string[]>(offset++, 'getEndorsers', []).slice() as string[]
+          endorsers = [...unwrapPlain<readonly string[]>(perAppResults[base + offset++], [])]
         }
 
         const isActiveInCurrentRound = activeRoundIds.has(idLc)
-        const isEndorsed =
-          endorsementScore >= endorsementScoreThreshold && !isBlacklisted && !isUnendorsed
+        const isEndorsed = endorsementScore >= endorsementScoreThreshold && !isBlacklisted && !isUnendorsed
 
         const meta = metadataObjs[i]
         const description = meta?.description ?? null
@@ -556,6 +357,14 @@ export const getVeBetterDaoApps: MCPTool = {
           metadata: meta ?? null,
         }
       })
+
+      const apps = categoryFilter
+        ? allApps.filter(a => {
+            const appCats = a.categories ?? a.metadata?.categories
+            if (!appCats || appCats.length === 0) return false
+            return appCats.some(c => categoryFilter.has(c.toLowerCase()))
+          })
+        : allApps
 
       const data = {
         network,

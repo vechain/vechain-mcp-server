@@ -114,6 +114,32 @@ describe('VeBetterDAO: on-chain apps tool', () => {
   )
 
   test(
+    'should filter apps by category (case-insensitive, OR semantics)',
+    async () => {
+      const response = await client.callTool({
+        name: 'getVeBetterDaoApps',
+        arguments: {
+          categories: ['Nutrition', 'plastic-waste-recycling'],
+          includeRoles: false,
+          metadataConcurrency: 8,
+        },
+      })
+      const sc = (response as any).structuredContent
+      if (!sc.ok) return
+      const d = sc.data
+      expect(Array.isArray(d.apps)).toBe(true)
+      expect(d.totalCount).toBe(d.apps.length)
+      const allowed = new Set(['nutrition', 'plastic-waste-recycling'])
+      for (const app of d.apps) {
+        const cats: string[] = app.categories ?? app.metadata?.categories ?? []
+        expect(cats.length).toBeGreaterThan(0)
+        expect(cats.some(c => allowed.has(c.toLowerCase()))).toBe(true)
+      }
+    },
+    90000,
+  )
+
+  test(
     'should resolve IPFS metadata when includeMetadata is true',
     async () => {
       const response = await client.callTool({

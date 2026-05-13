@@ -1,7 +1,6 @@
 import { z } from 'zod'
+import { IPFS_GATEWAY_URL } from '@/constants/ipfs'
 import { logger } from '@/utils/logger'
-
-const IPFS_GATEWAY_URL = 'https://api.gateway-proxy.vechain.org/ipfs'
 
 /**
  * Schema for IPFS CID (Content Identifier)
@@ -11,6 +10,38 @@ export const IPFSCIDSchema = z
   .string()
   .min(1)
   .describe('IPFS Content Identifier (CID)')
+
+/**
+ * Converts an IPFS URI (ipfs://, raw CID, or path) to an HTTP gateway URL.
+ * Returns the input untouched if it is already an http(s) URL, or null when falsy.
+ */
+export function ipfsToHttp(uri: string | undefined | null): string | null {
+  if (!uri) return null
+  if (uri.startsWith('ipfs://')) {
+    return `${IPFS_GATEWAY_URL}/${uri.slice('ipfs://'.length)}`
+  }
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return uri
+  return `${IPFS_GATEWAY_URL}/${uri.replace(/^\/+/, '')}`
+}
+
+/**
+ * Resolves a contract `metadataURI` against an optional `baseURI` into an HTTP URL.
+ *
+ * - Absolute URIs (`ipfs://...`, `http(s)://...`) are passed through `ipfsToHttp`.
+ * - Otherwise the value is treated as a path appended to `baseURI` (joined with a
+ *   single `/` separator) and then routed through the IPFS gateway.
+ *
+ * Returns `null` when `metadataURI` is empty.
+ */
+export function resolveMetadataUrl(baseURI: string, metadataURI: string): string | null {
+  if (!metadataURI) return null
+  if (metadataURI.startsWith('ipfs://') || metadataURI.startsWith('http')) {
+    return ipfsToHttp(metadataURI)
+  }
+  const base = baseURI ?? ''
+  const sep = base.endsWith('/') || metadataURI.startsWith('/') ? '' : '/'
+  return ipfsToHttp(`${base}${sep}${metadataURI}`)
+}
 
 /**
  * Fetches content from IPFS using the VeChain gateway proxy
