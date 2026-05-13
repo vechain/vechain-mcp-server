@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
@@ -57,7 +57,6 @@ export const getStargateTotalVthoClaimed: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting Stargate total VTHO claimed: ${String(error)}`)
       return indexerErrorResponse(`Error getting Stargate total VTHO claimed: ${String(error)}`)
     }
   },

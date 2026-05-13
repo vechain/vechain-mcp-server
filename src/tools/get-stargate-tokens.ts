@@ -49,7 +49,6 @@ export const getStargateTokens: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching Stargate tokens: ${String(error)}`)
       return indexerErrorResponse(`Error fetching Stargate tokens: ${String(error)}`)
     }
   },

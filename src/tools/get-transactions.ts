@@ -1,11 +1,11 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetTransactionsParamsBaseSchema,
   IndexerGetTransactionsParamsSchema,
   IndexerTransactionListResponseSchema,
-  IndexerTransactionSchema,
+  type IndexerTransactionSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
   createIndexerStructuredOutputSchema,
@@ -67,7 +67,6 @@ export const getTransactions: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting transactions from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(`Error getting transactions from VeWorld Indexer: ${String(error)}`)
     }
   },

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType, ThorNetworkType } from '@/services/thor'
 import {
   IndexerB3TRProposalEntrySchema,
@@ -105,7 +105,6 @@ export const getB3TRProposalsResults: MCPTool = {
       })
 
       if (!response.ok) {
-        logger.warn(`Failed to fetch proposals: ${response.status} ${response.statusText}`)
         return indexerErrorResponse('Failed to fetch B3TR proposals results')
       }
 
@@ -122,7 +121,6 @@ export const getB3TRProposalsResults: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR proposals results: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR proposals results: ${String(error)}`)
     }
   },

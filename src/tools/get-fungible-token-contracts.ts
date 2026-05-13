@@ -63,7 +63,6 @@ export const getFungibleTokenContracts: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting fungible token contracts of ${params.address} from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(
         `Error getting fungible token contracts of ${params.address} from VeWorld Indexer: ${String(error)}`,
       )

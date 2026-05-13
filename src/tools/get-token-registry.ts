@@ -67,7 +67,6 @@ export const getTokenRegistry: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching token registry: ${String(error)}`)
       return indexerErrorResponse(`Error fetching token registry: ${String(error)}`)
     }
   },

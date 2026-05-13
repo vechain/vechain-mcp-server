@@ -46,7 +46,6 @@ export const getExplorerBlockUsage: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: items },
       }
     } catch (error) {
-      logger.warn(`Error fetching explorer block usage: ${String(error)}`)
       return indexerErrorResponse(`Error fetching explorer block usage: ${String(error)}`)
     }
   },

@@ -44,7 +44,6 @@ export const getStargateTotalVetStakedHistoric: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: points },
       }
     } catch (error) {
-      logger.warn(`Error fetching historic VET staked: ${String(error)}`)
       return indexerErrorResponse(`Error fetching historic VET staked: ${String(error)}`)
     }
   },

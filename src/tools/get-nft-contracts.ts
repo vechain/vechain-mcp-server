@@ -60,7 +60,6 @@ export const getNFTContracts: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting NFT contracts from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(`Error getting NFT contracts from VeWorld Indexer: ${String(error)}`)
     }
   },

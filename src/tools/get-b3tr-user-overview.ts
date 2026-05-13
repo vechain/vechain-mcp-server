@@ -1,8 +1,9 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
   IndexerB3TRUserOverviewSchema,
+  IndexerGetB3TRUserOverviewParamsBaseSchema,
   IndexerGetB3TRUserOverviewParamsSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -24,8 +25,8 @@ export const getB3TRUserOverview: MCPTool = {
   name: 'getB3TRUserOverview',
   title: 'B3TR: User overview (totals)',
   description:
-    'Get the B3TR action overview for a specific wallet via /api/v1/b3tr/actions/users/{wallet}/overview. Returns total B3TR rewards, number of rewarded actions, sustainability impact totals, global rankings, and unique X-App interactions. Optionally filter by roundId or by date (yyyy-MM-dd UTC).',
-  inputSchema: IndexerGetB3TRUserOverviewParamsSchema.shape,
+    'Get the B3TR action overview for a specific wallet via /api/v1/b3tr/actions/users/{wallet}/overview. Returns total B3TR rewards, number of rewarded actions, sustainability impact totals, global rankings, and unique X-App interactions. Optionally filter by roundId OR date (yyyy-MM-dd UTC), but not both — they are mutually exclusive.',
+  inputSchema: IndexerGetB3TRUserOverviewParamsBaseSchema.shape,
   outputSchema: IndexerB3TRUserOverviewOutputSchema.shape,
   annotations: {
     idempotentHint: true,
@@ -56,7 +57,6 @@ export const getB3TRUserOverview: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: overview },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR user overview: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR user overview: ${String(error)}`)
     }
   },

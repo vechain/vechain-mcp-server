@@ -45,7 +45,6 @@ export const getAccountsTotals: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: response.data },
       }
     } catch (error) {
-      logger.warn(`Error fetching Accounts totals: ${String(error)}`)
       return indexerErrorResponse(`Error fetching Accounts totals: ${String(error)}`)
     }
   },

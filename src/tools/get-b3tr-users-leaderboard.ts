@@ -2,8 +2,9 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
-  IndexerB3TRUserLeaderboardEntrySchema,
+  type IndexerB3TRUserLeaderboardEntrySchema,
   IndexerB3TRUsersLeaderboardResponseSchema,
+  refineRoundIdDateMutualExclusion,
 } from '@/services/veworld-indexer/schemas'
 import {
   createIndexerStructuredOutputSchema,
@@ -22,14 +23,14 @@ export const ResponseSchema = createIndexerToolResponseSchema(
 )
 export type GetB3TRUsersLeaderboardResponse = z.infer<typeof ResponseSchema>
 
-const InputSchema = z
+const InputBaseSchema = z
   .object({
-    roundId: z.number().optional().describe('Optional round id to filter by'),
+    roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
       .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
+      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
     size: z.number().optional().describe('The results page size'),
     direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
     sortBy: z
@@ -40,12 +41,14 @@ const InputSchema = z
   })
   .describe('Parameters for querying the B3TR users leaderboard')
 
+const InputSchema = refineRoundIdDateMutualExclusion(InputBaseSchema)
+
 export const getB3TRUsersLeaderboard: MCPTool = {
   name: 'getB3TRUsersLeaderboard',
   title: 'B3TR: Users leaderboard',
   description:
-    "Get leaderboard of users' B3TR actions via /api/v1/b3tr/actions/leaderboards/users. Optionally filter by roundId or date; sort by totalRewardAmount or actionsRewarded; supports cursor pagination.",
-  inputSchema: InputSchema.shape,
+    "Get leaderboard of users' B3TR actions via /api/v1/b3tr/actions/leaderboards/users. Optionally filter by roundId OR date (yyyy-MM-dd UTC) but not both — they are mutually exclusive. Sort by totalRewardAmount or actionsRewarded; supports cursor pagination.",
+  inputSchema: InputBaseSchema.shape,
   outputSchema: OutputSchema.shape,
   annotations: {
     idempotentHint: true,
@@ -93,7 +96,6 @@ export const getB3TRUsersLeaderboard: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR users leaderboard: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR users leaderboard: ${String(error)}`)
     }
   },

@@ -61,7 +61,6 @@ export const getValidatorDelegations: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching validator delegations: ${String(error)}`)
       return indexerErrorResponse(`Error fetching validator delegations: ${String(error)}`)
     }
   },

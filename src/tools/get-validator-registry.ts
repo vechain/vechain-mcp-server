@@ -56,7 +56,6 @@ export const getValidatorRegistry: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching validator registry: ${String(error)}`)
       return indexerErrorResponse(`Error fetching validator registry: ${String(error)}`)
     }
   },

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
@@ -52,7 +52,6 @@ export const getStargateTotalVthoClaimedByAccount: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: total },
       }
     } catch (error) {
-      logger.warn(`Error fetching total VTHO claimed by account: ${String(error)}`)
       return indexerErrorResponse(`Error fetching total VTHO claimed by account: ${String(error)}`)
     }
   },

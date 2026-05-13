@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
@@ -69,7 +69,6 @@ export function createMetricsByPeriodTool(config: {
           },
         }
       } catch (error) {
-        logger.warn(`Error fetching metrics by period (${pathPrefix}): ${String(error)}`)
         return indexerErrorResponse(
           `Error fetching metrics by period (${pathPrefix}): ${String(error)}`,
         )
