@@ -5,12 +5,26 @@ import { dirname, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express, { type NextFunction, type Request, type Response } from 'express'
 
+import { createAuthMiddleware } from './middleware/auth'
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 const PORT = Number.parseInt(process.env.PORT || '3000', 10)
 const VECHAIN_NETWORK = process.env.VECHAIN_NETWORK || 'mainnet'
-const API_KEY = process.env.API_KEY || ''
+// API key required on protected routes (see authMiddleware). Read from
+// `MCP_API_KEY` first, fall back to the legacy `API_KEY` env to keep older
+// local setups working. When empty, the middleware refuses every request to
+// protected routes — there is no anonymous-allowed mode in production.
+const API_KEY = process.env.MCP_API_KEY || process.env.API_KEY || ''
+// Local-dev / integration-test escape hatch: when truthy the auth middleware
+// passes every request through. Refused at startup if `NODE_ENV=production`.
+const AUTH_DISABLED = process.env.MCP_AUTH_DISABLED === 'true'
+if (AUTH_DISABLED && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'MCP_AUTH_DISABLED=true is not allowed when NODE_ENV=production. Refusing to start.',
+  )
+}
 const MAX_PENDING = Number.parseInt(process.env.MAX_PENDING_REQUESTS || '100', 10)
 const REQUEST_TIMEOUT_MS = 30_000
 const MAX_RESTART_FAILURES = 5
@@ -226,13 +240,11 @@ function waitForReady(timeoutMs = 5000): Promise<void> {
 
 // -- Middleware ----------------------------------------------------------------
 
-function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  if (API_KEY && req.headers['x-api-key'] !== API_KEY) {
-    res.status(401).json({ error: 'Unauthorized' })
-    return
-  }
-  next()
+if (AUTH_DISABLED) {
+  log('warn', 'MCP auth is DISABLED via MCP_AUTH_DISABLED=true — do not use in production', {})
 }
+
+const authMiddleware = createAuthMiddleware(API_KEY, { disabled: AUTH_DISABLED })
 
 function backpressureMiddleware(_req: Request, res: Response, next: NextFunction): void {
   if (mcpClient.pendingRequests.size >= MAX_PENDING) {
