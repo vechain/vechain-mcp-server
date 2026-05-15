@@ -31,41 +31,56 @@ jobs:
           tags: vechain-mcp-server:ci-test
           no-cache: true
 
+      - name: Generate ephemeral MCP API key
+        id: api-key
+        run: |
+          set -euo pipefail
+          KEY=$(openssl rand -hex 32)
+          echo "::add-mask::$KEY"
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+
       - name: Run container (background) for integration test
+        env:
+          MCP_API_KEY: ${{ steps.api-key.outputs.key }}
         run: |
           docker run -d --rm \
             -p 4000:4000 \
             -e VECHAIN_NETWORK=mainnet \
             -e PORT=4000 \
+            -e MCP_API_KEY \
             --name vechain-mcp-ci \
             vechain-mcp-server:ci-test
 
-      - name: Wait for health endpoint
+      - name: Wait for readiness (/ready)
         shell: bash
         run: |
           set -e
           for i in {1..60}; do
-            if curl -fsS http://localhost:4000/health >/dev/null; then
-              echo "Health OK"
+            if curl -fsS http://localhost:4000/ready >/dev/null; then
+              echo "Ready OK"
               exit 0
             fi
             echo "Waiting for server... ($i)"
             sleep 2
           done
-          echo "Server failed to become healthy in time"
+          echo "Server failed to become ready in time"
           docker logs vechain-mcp-ci || true
           exit 1
 
       - name: Wait for MCP readiness (tools/list)
         shell: bash
+        env:
+          MCP_API_KEY: ${{ steps.api-key.outputs.key }}
         run: |
           set -e
+          LAST_RESPONSE=""
           for i in {1..60}; do
-            RESPONSE=$(curl -sS -m 10 -X POST http://localhost:4000/mcp \
+            LAST_RESPONSE=$(curl -sS -m 10 -X POST http://localhost:4000/mcp \
+              -H "Authorization: Bearer ${MCP_API_KEY}" \
               -H 'Content-Type: application/json' \
               -H 'Accept: application/json, text/event-stream' \
               -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}' || true)
-            if echo "$RESPONSE" | jq -e '.result.tools | any(.name == "thorGetBlock")' >/dev/null 2>&1; then
+            if echo "$LAST_RESPONSE" | jq -e '.result.tools | any(.name == "thorGetBlock")' >/dev/null 2>&1; then
               echo "MCP tools ready"
               exit 0
             fi
@@ -73,13 +88,21 @@ jobs:
             sleep 2
           done
           echo "MCP tools not ready in time"
+          echo "--- last response (first 1KB) ---"
+          echo "$LAST_RESPONSE" | head -c 1024
+          echo
+          echo "--- container logs (last 100 lines) ---"
+          docker logs --tail 100 vechain-mcp-ci || true
           exit 1
 
       - name: Integration check - thorGetBlock 1000
         shell: bash
+        env:
+          MCP_API_KEY: ${{ steps.api-key.outputs.key }}
         run: |
           set -euo pipefail
           RESPONSE=$(curl -s --max-time 60 -X POST http://localhost:4000/mcp \
+            -H "Authorization: Bearer ${MCP_API_KEY}" \
             -H 'Content-Type: application/json' \
             -H 'Accept: application/json, text/event-stream' \
             -d '{
