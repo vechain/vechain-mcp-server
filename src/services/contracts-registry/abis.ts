@@ -1,37 +1,38 @@
 /**
  * Centralized ABI imports for VeBetterDAO, Stargate and standard ERC20/ERC721.
  *
- * Both `@vechain/vebetterdao-contracts@9` and
- * `@vechain/stargate-contracts-artifacts@4` ship an ESM dist that is broken on
- * Node 22: it does directory imports without an `index.js` and imports `.json`
- * files without the required `with { type: "json" }` attribute. We therefore
- * load them through the CJS entry point via `createRequire`: `require()` of
- * JSON works natively on the CJS path. This keeps `tsx --watch` (no bundling)
+ * VeBetterDAO ABIs come from `@vechain/vebetterdao-contracts`. The package's
+ * ESM dist is broken on Node 22 (directory imports without an `index.js`, JSON
+ * imports without the required `with { type: "json" }` attribute), so we load
+ * it through the CJS entry point via `createRequire`. `require()` of JSON
+ * works natively on the CJS path: this keeps `tsx --watch` (no bundling)
  * happy AND lets esbuild inline `require(stringLiteral)` calls in the tsup
  * build.
+ *
+ * Stargate ABIs are vendored as local JSON files in `./stargate/*.json` taken
+ * from `@vechain/stargate-contracts-artifacts@4` (V4 = currently live on
+ * mainnet/testnet). The upstream package buries them under `deprecated/V4/`
+ * and has no JSON barrel, so vendoring is the lightest path until they ship
+ * a cleaner artifacts layout — at that point swap these imports back to the
+ * package. Source paths:
+ *  - Stargate.json            ← artifacts/contracts/Stargate.sol/Stargate.json
+ *  - StargateNFT.json         ← artifacts/contracts/StargateNFT/StargateNFT.sol/StargateNFT.json
+ *  - StargateDelegation.json  ← artifacts/contracts/deprecated/StargateDelegation/V4/StargateDelegation.sol/StargateDelegation.json
+ *  - NodeManagement.json      ← artifacts/contracts/deprecated/NodeManagement/NodeManagementV4.sol/NodeManagementV4.json
  */
 
 import { createRequire } from 'node:module'
 import type { Abi } from 'viem'
+import NodeManagementAbi from './stargate/NodeManagement.json'
+import StargateAbi from './stargate/Stargate.json'
+import StargateDelegationAbi from './stargate/StargateDelegation.json'
+import StargateNFTAbi from './stargate/StargateNFT.json'
 
 const requireCJS = createRequire(import.meta.url)
 
 type AbiJson = { abi: Abi }
 
 const vbd = requireCJS('@vechain/vebetterdao-contracts') as Record<string, AbiJson>
-
-const StargateJson = requireCJS(
-  '@vechain/stargate-contracts-artifacts/artifacts/contracts/Stargate.sol/Stargate.json',
-) as AbiJson
-const StargateNFTJson = requireCJS(
-  '@vechain/stargate-contracts-artifacts/artifacts/contracts/StargateNFT/StargateNFT.sol/StargateNFT.json',
-) as AbiJson
-const StargateDelegationJson = requireCJS(
-  '@vechain/stargate-contracts-artifacts/artifacts/contracts/deprecated/StargateDelegation/V4/StargateDelegation.sol/StargateDelegation.json',
-) as AbiJson
-const NodeManagementJson = requireCJS(
-  '@vechain/stargate-contracts-artifacts/artifacts/contracts/deprecated/NodeManagement/NodeManagementV4.sol/NodeManagementV4.json',
-) as AbiJson
 
 export const B3TR_ABI = vbd.B3trContractJson.abi
 export const VOT3_ABI = vbd.Vot3ContractJson.abi
@@ -49,10 +50,10 @@ export const VEBETTER_PASSPORT_ABI = vbd.VeBetterPassportJson.abi
 export const GRANTS_MANAGER_ABI = vbd.GrantsManagerJson.abi
 export const DBA_POOL_ABI = vbd.DBAPoolJson.abi
 
-export const STARGATE_ABI = StargateJson.abi
-export const STARGATE_NFT_ABI = StargateNFTJson.abi
-export const STARGATE_DELEGATION_ABI = StargateDelegationJson.abi
-export const NODE_MANAGEMENT_ABI = NodeManagementJson.abi
+export const STARGATE_ABI = StargateAbi as Abi
+export const STARGATE_NFT_ABI = StargateNFTAbi as Abi
+export const STARGATE_DELEGATION_ABI = StargateDelegationAbi as Abi
+export const NODE_MANAGEMENT_ABI = NodeManagementAbi as Abi
 
 /**
  * Canonical ERC20 ABI (read + write subset).
