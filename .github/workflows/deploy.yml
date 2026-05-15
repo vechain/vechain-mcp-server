@@ -1,0 +1,159 @@
+name: Deploy MCP service
+
+# Reusable workflow that rolls out a previously-pushed image to the MCP
+# ECS service in a given environment. The image must already exist in the
+# ECR repo for the target environment (see publish-image.yml).
+#
+# The GitHub `environment` input controls everything env-specific:
+#   - which AWS role is assumed (OIDC),
+#   - which protection rules apply (e.g. required reviewers on `prod`),
+#   - which env-scoped secrets are visible to the job.
+#
+# No account IDs, cluster names, or service names are hardcoded — they
+# all come from env-scoped secrets so the same workflow file can drive
+# any environment.
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (e.g. the git tag name)'
+        required: true
+        type: string
+      environment:
+        description: 'GitHub environment to deploy to (dev/prod)'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy'
+        required: true
+        type: string
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Validate required env
+        run: |
+          set -e
+          for v in AWS_REGION ECS_CLUSTER ECS_SERVICE IMAGE_TAG; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Required env var '$v' is empty"
+              exit 1
+            fi
+          done
+          echo "Deploying image tag '$IMAGE_TAG' to cluster '$ECS_CLUSTER' service '$ECS_SERVICE'"
+
+      # Register a new task definition revision that explicitly uses the
+      # requested image tag, then update the service to that revision.
+      - name: Register task definition revision and deploy requested image tag
+        run: |
+          set -euo pipefail
+
+          CURRENT_TASK_DEF_ARN="$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].taskDefinition' \
+            --output text)"
+
+          if [ -z "$CURRENT_TASK_DEF_ARN" ] || [ "$CURRENT_TASK_DEF_ARN" = "None" ]; then
+            echo "::error::Could not determine current task definition for service '$ECS_SERVICE'"
+            exit 1
+          fi
+
+          aws ecs describe-task-definition \
+            --task-definition "$CURRENT_TASK_DEF_ARN" \
+            --query 'taskDefinition' \
+            --output json > task-definition.json
+
+          jq --arg IMAGE_TAG "$IMAGE_TAG" '
+            def retag:
+              if test("@sha256:") then
+                sub("@sha256:[A-Fa-f0-9]+"; ":" + $IMAGE_TAG)
+              elif test(":[^/]+$") then
+                sub(":[^/]+$"; ":" + $IMAGE_TAG)
+              else
+                . + ":" + $IMAGE_TAG
+              end;
+
+            {
+              family,
+              taskRoleArn,
+              executionRoleArn,
+              networkMode,
+              containerDefinitions: (.containerDefinitions | map(.image |= retag)),
+              volumes,
+              placementConstraints,
+              requiresCompatibilities,
+              cpu,
+              memory,
+              tags,
+              pidMode,
+              ipcMode,
+              proxyConfiguration,
+              inferenceAccelerators,
+              ephemeralStorage,
+              runtimePlatform
+            }
+          ' task-definition.json > register-task-definition.json
+
+          NEW_TASK_DEF_ARN="$(aws ecs register-task-definition \
+            --cli-input-json file://register-task-definition.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)"
+
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "$NEW_TASK_DEF_ARN" \
+            >/dev/null
+
+          echo "Triggered rollout for $ECS_SERVICE with task definition $NEW_TASK_DEF_ARN and image tag '$IMAGE_TAG'"
+
+      - name: Wait for service stable
+        run: |
+          set -euo pipefail
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+          echo "Service reached steady state"
+
+      - name: Report deployment summary
+        if: always()
+        run: |
+          set -euo pipefail
+          aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].{Status:status,Desired:desiredCount,Running:runningCount,TaskDef:taskDefinition,LastEvent:events[0].message}' \
+            --output table
