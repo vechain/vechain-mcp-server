@@ -180,9 +180,15 @@ docker pull ghcr.io/vechain/vechain-mcp-server:latest
 docker run -d --rm \
   -p 4000:4000 \
   -e VECHAIN_NETWORK=mainnet \ # mainnet | testnet | solo
+  -e MCP_API_KEY=replace-me \  # bearer token clients must send on /mcp
   --name vechain-mcp \
   ghcr.io/vechain/vechain-mcp-server:latest
 ```
+
+For local experimentation you can set `MCP_AUTH_DISABLED=true` instead
+of `MCP_API_KEY`; the server then accepts unauthenticated requests on
+`/mcp`. The server refuses to start with this flag when
+`NODE_ENV=production`.
 
 3) Verify:
 
@@ -196,11 +202,15 @@ curl -fsS http://localhost:4000/health
 curl -sS -m 10 -X POST http://localhost:4000/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
+  -H 'Authorization: Bearer replace-me' \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
 ```
 
 Notes:
 * MCP endpoint: `POST /mcp` (Content-Type: application/json, Accept: application/json, text/event-stream).
+* Auth: `POST /mcp`, `GET /tools` and `POST /tools/call` require
+  `Authorization: Bearer <MCP_API_KEY>`. `GET /health` and `GET /ready`
+  are unauthenticated so a load balancer can probe them.
 
 ## Local Development Setup
 

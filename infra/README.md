@@ -59,6 +59,29 @@ stack is deployed for the first time:
 /mcp/server/target-group-arn
 /mcp/server/log-group-name
 /mcp/server/desired-count
+/mcp/server/api-key            # SSM SecureString
 ```
 
 These are populated by whoever owns the platform stack.
+
+### `MCP_API_KEY` (bearer auth)
+
+The MCP server refuses every request to `/mcp`, `/tools` and
+`/tools/call` unless the client sends `Authorization: Bearer <key>`
+matching `MCP_API_KEY` (constant-time comparison). The container reads
+the key from the env var at startup; the value is injected by ECS from
+the SSM SecureString at `ApiKeySsmName` (default `/mcp/server/api-key`).
+
+Two requirements on the platform stack:
+
+1. Store the key as an **SSM SecureString** under the parameter name
+   above. Rotation = update the parameter value and force a new
+   deployment of the ECS service.
+2. The ECS **task execution role** must allow:
+   - `ssm:GetParameters` on
+     `arn:aws:ssm:<region>:<account>:parameter/mcp/server/api-key`
+   - `kms:Decrypt` on the KMS key used to encrypt the SecureString
+     (`alias/aws/ssm` if the AWS-managed key is used).
+
+`/health` and `/ready` remain public so the load balancer's target
+group health check works without a credential.
