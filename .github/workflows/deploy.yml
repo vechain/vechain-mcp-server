@@ -74,23 +74,71 @@ jobs:
           done
           echo "Deploying image tag '$IMAGE_TAG' to cluster '$ECS_CLUSTER' service '$ECS_SERVICE'"
 
-      # Path A (default): infrastructure-as-code owns the TaskDefinition,
-      # which references a mutable tag (e.g. ':latest'). Pushing the image
-      # to ECR before this step is enough — `--force-new-deployment` makes
-      # ECS pull the fresh image on the next task start.
-      #
-      # If the project later switches to Path B (workflow registers a new
-      # task definition revision per release), replace this step with the
-      # describe/register/update flow.
-      - name: Force new ECS deployment
+      # Register a new task definition revision that explicitly uses the
+      # requested image tag, then update the service to that revision.
+      - name: Register task definition revision and deploy requested image tag
         run: |
           set -euo pipefail
+
+          CURRENT_TASK_DEF_ARN="$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].taskDefinition' \
+            --output text)"
+
+          if [ -z "$CURRENT_TASK_DEF_ARN" ] || [ "$CURRENT_TASK_DEF_ARN" = "None" ]; then
+            echo "::error::Could not determine current task definition for service '$ECS_SERVICE'"
+            exit 1
+          fi
+
+          aws ecs describe-task-definition \
+            --task-definition "$CURRENT_TASK_DEF_ARN" \
+            --query 'taskDefinition' \
+            --output json > task-definition.json
+
+          jq --arg IMAGE_TAG "$IMAGE_TAG" '
+            def retag:
+              if test("@sha256:") then
+                sub("@sha256:[A-Fa-f0-9]+"; ":" + $IMAGE_TAG)
+              elif test(":[^/]+$") then
+                sub(":[^/]+$"; ":" + $IMAGE_TAG)
+              else
+                . + ":" + $IMAGE_TAG
+              end;
+
+            {
+              family,
+              taskRoleArn,
+              executionRoleArn,
+              networkMode,
+              containerDefinitions: (.containerDefinitions | map(.image |= retag)),
+              volumes,
+              placementConstraints,
+              requiresCompatibilities,
+              cpu,
+              memory,
+              tags,
+              pidMode,
+              ipcMode,
+              proxyConfiguration,
+              inferenceAccelerators,
+              ephemeralStorage,
+              runtimePlatform
+            }
+          ' task-definition.json > register-task-definition.json
+
+          NEW_TASK_DEF_ARN="$(aws ecs register-task-definition \
+            --cli-input-json file://register-task-definition.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)"
+
           aws ecs update-service \
             --cluster "$ECS_CLUSTER" \
             --service "$ECS_SERVICE" \
-            --force-new-deployment \
+            --task-definition "$NEW_TASK_DEF_ARN" \
             >/dev/null
-          echo "Triggered rollout for $ECS_SERVICE"
+
+          echo "Triggered rollout for $ECS_SERVICE with task definition $NEW_TASK_DEF_ARN and image tag '$IMAGE_TAG'"
 
       - name: Wait for service stable
         run: |

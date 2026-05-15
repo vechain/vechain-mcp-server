@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   ECS Fargate service for the MCP server. The stack only defines the
-  service-level resources (TaskDefinition + Service + LogGroup). VPC,
-  subnets, security groups, IAM identities, ALB, target group and the
-  ECS cluster are expected to live in a separate platform stack and are
-  supplied as parameters (typically resolved at deploy time via SSM, see
-  infra/params.<env>.json).
+  service-level resources (TaskDefinition + Service). VPC, subnets,
+  security groups, IAM identities, ALB, target group, ECS cluster, and
+  the CloudWatch log group are expected to live in a separate platform
+  stack or already exist and are supplied as parameters (typically
+  resolved at deploy time via SSM, see infra/params.<env>.json).
 
 Parameters:
   EnvironmentName:
@@ -114,8 +114,8 @@ Resources:
         MaximumPercent: 200
         MinimumHealthyPercent: 50
         DeploymentCircuitBreaker:
-          Enable: false
-          Rollback: false
+          Enable: true
+          Rollback: true
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
@@ -131,5 +131,5 @@ Outputs:
     Description: ARN of the ECS service created by this stack.
     Value: !Ref Service
   TaskDefinitionArn:
-    Description: ARN of the initial task definition. Subsequent revisions are produced by the release pipeline.
+    Description: ARN of the task definition created by this stack.
     Value: !Ref TaskDefinition

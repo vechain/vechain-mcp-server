@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: publish-release
   cancel-in-progress: false
 
 jobs:
@@ -128,11 +128,12 @@ jobs:
       environment: dev
     secrets: inherit
 
-  # Roll out to prod only after dev has succeeded AND a reviewer approves.
-  # The approval gate is enforced by the `prod` GitHub environment's
-  # protection rules (required_reviewers), not by the workflow.
+  # Roll out to prod only after dev has succeeded, the prod image is
+  # available, both package publications have completed successfully, AND a
+  # reviewer approves. The approval gate is enforced by the `prod` GitHub
+  # environment's protection rules (required_reviewers), not by the workflow.
   deploy-prod:
-    needs: [deploy-dev, publish-image-prod]
+    needs: [deploy-dev, publish-image-prod, publish-to-npmjs, publish-to-github-packages]
     uses: ./.github/workflows/deploy.yml
     with:
       image_tag: ${{ github.ref_name }}
