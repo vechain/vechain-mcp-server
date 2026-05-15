@@ -95,11 +95,21 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Build the multi-arch image once and push it to the dev registries
-  # (dev ECR + GHCR). Gated on `build` so a tag that fails npm version
-  # (non-semver) does not produce a Docker release.
-  publish-image-dev:
+  # Reuses the same validate job CI runs on every PR: builds the image,
+  # boots it, smoke-tests MCP against mainnet, and gates on a Trivy
+  # CRITICAL/HIGH scan (fixed only). Prevents tag releases from skipping
+  # the gate that PRs already pass.
+  image-validate:
     needs: [build]
+    uses: ./.github/workflows/image-validate.yml
+    permissions:
+      contents: read
+
+  # Build the multi-arch image once and push it to the dev registries
+  # (dev ECR + GHCR). Gated on `image-validate` so a tag that fails npm
+  # version (non-semver) or trivy does not produce a Docker release.
+  publish-image-dev:
+    needs: [build, image-validate]
     uses: ./.github/workflows/publish-image.yml
     with:
       image_tag: ${{ github.ref_name }}
