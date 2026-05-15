@@ -39,6 +39,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@vechain/sdk-core": "^2.0.5",
     "@vechain/sdk-network": "^2.0.5",
+    "@vechain/vebetterdao-contracts": "^9.0.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "helmet": "8.1.0",

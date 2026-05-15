@@ -1,30 +1,25 @@
 import type { ContractClause } from '@vechain/sdk-core'
 import type { Contract, ContractCallResult } from '@vechain/sdk-network'
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
-import {
-  type VeBetterDaoNetwork,
-  VEBETTERDAO_CONTRACTS,
-  VEBETTERDAO_NETWORK_ADDRESSES,
-} from '@/constants/addresses'
-import {
-  ERC20_ABI,
-  ERC721_ENUMERABLE_ABI,
-  X_ALLOCATION_VOTING_VIEW_ABI,
-  X2EARN_APPS_VIEW_ABI,
-} from '@/services/abis'
+import { ERC20_ABI, ERC721_ENUMERABLE_ABI, X_ALLOCATION_VOTING_VIEW_ABI, X2EARN_APPS_VIEW_ABI } from '@/services/abis'
+import { type NetworkName, networkKey, resolveAddress } from '@/services/contracts-registry'
 import { getThorClient, getThorNetworkType, getThorNodeUrl } from '@/services/thor'
 import { logger } from '@/utils/logger'
 
 export { X_ALLOCATION_VOTING_VIEW_ABI, X2EARN_APPS_VIEW_ABI }
+
+export type VeBetterDaoNetwork = NetworkName
 
 export function getVeBetterDaoContractAddresses(): {
   network: VeBetterDaoNetwork
   x2EarnApps: string
   xAllocationVoting: string
 } {
-  const net = getThorNetworkType()
-  const network: VeBetterDaoNetwork = net === 'testnet' ? 'testnet' : 'mainnet'
-  return { network, ...VEBETTERDAO_NETWORK_ADDRESSES[network] }
+  return {
+    network: networkKey(),
+    x2EarnApps: resolveAddress('x2EarnApps'),
+    xAllocationVoting: resolveAddress('xAllocationVoting'),
+  }
 }
 
 /**
@@ -189,7 +184,7 @@ export async function getCurrentRound(): Promise<number | null> {
       functionName: 'currentRoundId',
     })
 
-    const url = `${baseUrl}/accounts/${VEBETTERDAO_CONTRACTS.X_ALLOCATION_VOTING}`
+    const url = `${baseUrl}/accounts/${resolveAddress('xAllocationVoting')}`
 
     const response = await fetch(url, {
       method: 'POST',
@@ -241,7 +236,8 @@ export async function getGMNFTLevel(address: string): Promise<{
     })
 
     // Call balanceOf to see if user has any GM NFTs
-    const balanceUrl = `${baseUrl}/accounts/${VEBETTERDAO_CONTRACTS.GALAXY_MEMBER}`
+    const galaxyMemberAddress = resolveAddress('galaxyMember')
+    const balanceUrl = `${baseUrl}/accounts/${galaxyMemberAddress}`
 
     const balanceResponse = await fetch(balanceUrl, {
       method: 'POST',
@@ -281,7 +277,7 @@ export async function getGMNFTLevel(address: string): Promise<{
         args: [address as `0x${string}`, BigInt(0)],
       })
 
-      const tokenIdUrl = `${baseUrl}/accounts/${VEBETTERDAO_CONTRACTS.GALAXY_MEMBER}`
+      const tokenIdUrl = `${baseUrl}/accounts/${galaxyMemberAddress}`
 
       const tokenIdResponse = await fetch(tokenIdUrl, {
         method: 'POST',
