@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  ECS Fargate service for the MCP server. The stack only defines the
+  service-level resources (TaskDefinition + Service). VPC, subnets,
+  security groups, IAM identities, ALB, target group, ECS cluster, and
+  the CloudWatch log group are expected to live in a separate platform
+  stack or already exist and are supplied as parameters (typically
+  resolved at deploy time via SSM, see infra/params.<env>.json).
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Description: Short environment identifier appended to resource names (e.g. dev, prod).
+
+  ServiceName:
+    Type: String
+    Default: mcp-server
+    Description: Base name for the ECS service and TaskDefinition family.
+
+  ContainerImage:
+    Type: String
+    Description: Full image URI to run (e.g. <registry>/<repo>:<tag>). Supplied by the release pipeline.
+
+  ContainerPort:
+    Type: Number
+    Default: 4000
+    Description: Port the container listens on (must match the app's PORT).
+
+  TaskCpu:
+    Type: String
+    Default: '512'
+    AllowedValues: ['256', '512', '1024', '2048', '4096']
+
+  TaskMemory:
+    Type: String
+    Default: '1024'
+    Description: Fargate-compatible memory value in MiB.
+
+  TaskRoleArn:
+    Type: String
+    Description: IAM role assumed by the container at runtime (application permissions).
+
+  ExecutionRoleArn:
+    Type: String
+    Description: IAM role used by ECS to pull the image and write logs.
+
+  ClusterArn:
+    Type: String
+    Description: ARN of the ECS cluster that hosts the service.
+
+  SubnetIds:
+    Type: CommaDelimitedList
+    Description: Private subnets the Fargate tasks run in.
+
+  SecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security groups attached to the Fargate ENIs.
+
+  TargetGroupArn:
+    Type: String
+    Description: ALB target group ARN that fronts the service.
+
+  LogGroupName:
+    Type: String
+    Description: Pre-existing CloudWatch log group to stream container logs into.
+
+  DesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 0
+
+  HealthCheckGracePeriodSeconds:
+    Type: Number
+    Default: 60
+
+Resources:
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${ServiceName}-${EnvironmentName}'
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+      TaskRoleArn: !Ref TaskRoleArn
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      ContainerDefinitions:
+        - Name: App
+          Image: !Ref ContainerImage
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              Protocol: tcp
+          Environment:
+            - Name: PORT
+              Value: !Ref ContainerPort
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroupName
+              awslogs-stream-prefix: !Sub '${ServiceName}-${EnvironmentName}'
+              awslogs-region: !Ref AWS::Region
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub '${ServiceName}-${EnvironmentName}'
+      Cluster: !Ref ClusterArn
+      LaunchType: FARGATE
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      HealthCheckGracePeriodSeconds: !Ref HealthCheckGracePeriodSeconds
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups: !Ref SecurityGroupIds
+      LoadBalancers:
+        - ContainerName: App
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroupArn
+
+Outputs:
+  ServiceArn:
+    Description: ARN of the ECS service created by this stack.
+    Value: !Ref Service
+  TaskDefinitionArn:
+    Description: ARN of the task definition created by this stack.
+    Value: !Ref TaskDefinition
