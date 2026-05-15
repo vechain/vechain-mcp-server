@@ -1,0 +1,11 @@
+[
+  {"ParameterKey": "EnvironmentName",     "ParameterValue": "dev"},
+  {"ParameterKey": "ServiceName",         "ParameterValue": "mcp-server"},
+  {"ParameterKey": "DomainName",          "ParameterValue": "mcp.dev.vechain.org"},
+  {"ParameterKey": "ContainerPort",       "ParameterValue": "4000"},
+  {"ParameterKey": "TaskCpu",             "ParameterValue": "512"},
+  {"ParameterKey": "TaskMemory",          "ParameterValue": "1024"},
+  {"ParameterKey": "DesiredCount",        "ParameterValue": "1"},
+  {"ParameterKey": "ApiKeySsmName",       "ParameterValue": "/mcp/server/api-key"},
+  {"ParameterKey": "RateLimitRequests",   "ParameterValue": "2000"}
+]
