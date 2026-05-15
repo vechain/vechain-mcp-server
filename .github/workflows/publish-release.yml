@@ -34,8 +34,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Set package version from tag
-        run: npm version "${GITHUB_REF_NAME}" --no-git-tag-version --allow-same-version
+      - name: Verify version matches tag
+        run: |
+          TAG='${{ github.ref_name }}'
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [[ "$TAG" != "$PKG_VERSION" ]]; then
+            echo "::error::Tag ($TAG) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
 
       - name: Upload build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -51,6 +57,7 @@ jobs:
   publish-to-npmjs:
     needs: [build]
     runs-on: ubuntu-latest
+    environment: npm-publish
     permissions:
       contents: read
       id-token: write
@@ -66,11 +73,13 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - name: Ensure npm >= 11.5.1
-        run: npm install -g npm@latest
+      - name: Upgrade npm
+        run: npm install -g npm@11.5.1
 
       - name: Publish to npmjs.org
-        run: npm publish --access public --tag latest
+        run: npm publish --access public --tag latest --provenance
+        env:
+          NPM_CONFIG_PROVENANCE: true
 
   publish-to-github-packages:
     needs: [build]

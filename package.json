@@ -11,7 +11,7 @@
   "homepage": "https://github.com/vechain/vechain-mcp-server",
   "repository": {
     "type": "git",
-    "url": "github:vechain/vechain-mcp-server"
+    "url": "git+https://github.com/vechain/vechain-mcp-server.git"
   },
   "keywords": [
     "VeChain",
