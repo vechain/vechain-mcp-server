@@ -95,10 +95,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Push the image to the dev environment's ECR first. Doing this before
-  # the prod ECR push (and the dev deploy) ensures the image is available
-  # by the time deploy-dev runs.
+  # Build the multi-arch image once and push it to the dev registries
+  # (dev ECR + GHCR). Gated on `build` so a tag that fails npm version
+  # (non-semver) does not produce a Docker release.
   publish-image-dev:
+    needs: [build]
     uses: ./.github/workflows/publish-image.yml
     with:
       image_tag: ${{ github.ref_name }}
@@ -106,17 +107,50 @@ jobs:
       environment: dev
     secrets: inherit
 
-  # Push to the prod ECR in parallel with the dev rollout — the prod
-  # rollout itself is gated by environment protection rules, so the prod
-  # image will be ready well before the prod deploy is approved.
-  publish-image-prod:
+  # Promote the exact manifest published to GHCR by `publish-image-dev`
+  # into the prod ECR. No rebuild: `docker buildx imagetools create`
+  # copies by digest, so dev and prod always end up running the same
+  # image content under the same tag. Only the immutable `:<tag>` is
+  # written to prod ECR; `:latest` is not mutated on prod.
+  copy-image-to-prod:
     needs: [publish-image-dev]
-    uses: ./.github/workflows/publish-image.yml
-    with:
-      image_tag: ${{ github.ref_name }}
-      set_latest: true
-      environment: prod
-    secrets: inherit
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    env:
+      ECR_REPOSITORY: mcp-server
+      IMAGE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: Configure AWS credentials (prod)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to prod ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@19d944daaa35f0fa1d3f7f8af1d3f2e5de25c5b7 # v2.1.4
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Copy multi-arch manifest GHCR -> prod ECR
+        run: |
+          set -euo pipefail
+          SRC="ghcr.io/${{ github.repository }}:${IMAGE_TAG}"
+          DST="${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker buildx imagetools create --tag "$DST" "$SRC"
+          echo "Promoted $SRC -> $DST"
 
   # Roll out the just-published image to the dev environment. No approval
   # gate; the `dev` GitHub environment has no protection rules.
@@ -133,7 +167,7 @@ jobs:
   # reviewer approves. The approval gate is enforced by the `prod` GitHub
   # environment's protection rules (required_reviewers), not by the workflow.
   deploy-prod:
-    needs: [deploy-dev, publish-image-prod, publish-to-npmjs, publish-to-github-packages]
+    needs: [deploy-dev, copy-image-to-prod, publish-to-npmjs, publish-to-github-packages]
     uses: ./.github/workflows/deploy.yml
     with:
       image_tag: ${{ github.ref_name }}
