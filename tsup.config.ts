@@ -10,4 +10,8 @@ export default defineConfig({
   splitting: false,
   bundle: true,
   external: ['@modelcontextprotocol/sdk', '@vechain/sdk-network', 'express', 'zod', 'tslog'],
+  noExternal: ['@vechain/vebetterdao-contracts'],
+  loader: {
+    '.json': 'json',
+  },
 })
