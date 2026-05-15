@@ -73,6 +73,15 @@ Parameters:
     Type: Number
     Default: 60
 
+  ApiKeySsmName:
+    Type: String
+    Default: /mcp/server/api-key
+    Description: >-
+      Name of the SSM SecureString parameter that stores the bearer API key
+      enforced by the MCP server on protected routes. The ECS execution role
+      must have permission to read this parameter and decrypt it with its KMS
+      key.
+
 Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -94,6 +103,9 @@ Resources:
           Environment:
             - Name: PORT
               Value: !Ref ContainerPort
+          Secrets:
+            - Name: MCP_API_KEY
+              ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ApiKeySsmName}'
           LogConfiguration:
             LogDriver: awslogs
             Options:
