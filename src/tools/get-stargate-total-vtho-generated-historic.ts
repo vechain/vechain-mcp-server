@@ -41,7 +41,6 @@ export const getStargateTotalVthoGeneratedHistoric: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: points },
       }
     } catch (error) {
-      logger.warn(`Error fetching historic VTHO generated: ${String(error)}`)
       return indexerErrorResponse(`Error fetching historic VTHO generated: ${String(error)}`)
     }
   },

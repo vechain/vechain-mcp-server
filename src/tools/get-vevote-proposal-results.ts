@@ -50,7 +50,6 @@ export const getVevoteProposalResults: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: response.data },
       }
     } catch (error) {
-      logger.warn(`Error fetching VeVote proposal results: ${String(error)}`)
       return indexerErrorResponse(`Error fetching VeVote proposal results: ${String(error)}`)
     }
   },

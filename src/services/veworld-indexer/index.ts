@@ -29,7 +29,14 @@ export const veworldIndexerGet = async <
     })
 
     if (!response.ok) {
-      logger.warn(`Failed to fetch VeWorld Indexer data: ${response.status} ${response.statusText}`)
+      // Log the URL and response body so 4xx/5xx failures can be diagnosed
+      // without re-running the request manually. The indexer puts the actual
+      // reason (e.g. "appId must match ...", "roundId and date cannot be
+      // provided at the same time") in the JSON body.
+      const body = await response.text().catch(() => '<unreadable>')
+      logger.warn(
+        `Failed to fetch VeWorld Indexer data: ${response.status} ${response.statusText} for ${url.toString()} — body: ${body}`,
+      )
 
       return null
     }
@@ -67,7 +74,11 @@ export const veworldIndexerGetSingle = async <T>({
       headers: { 'Content-Type': 'application/json' },
     })
     if (!response.ok) {
-      logger.warn(`Failed to fetch VeWorld Indexer data: ${response.status} ${response.statusText}`)
+      // See veworldIndexerGet — same rationale for logging body + URL on !ok.
+      const body = await response.text().catch(() => '<unreadable>')
+      logger.warn(
+        `Failed to fetch VeWorld Indexer data: ${response.status} ${response.statusText} for ${url.toString()} — body: ${body}`,
+      )
       return null
     }
     const data = (await response.json()) as T

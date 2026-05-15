@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
-  IndexerB3TRUserDailySummarySchema,
+  type IndexerB3TRUserDailySummarySchema,
   IndexerB3TRUserDailySummariesResponseSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -78,7 +78,6 @@ export const getB3TRUserDailySummaries: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR user daily summaries: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR user daily summaries: ${String(error)}`)
     }
   },

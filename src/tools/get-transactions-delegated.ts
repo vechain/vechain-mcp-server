@@ -1,10 +1,10 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
   IndexerGetDelegatedTransactionsParamsSchema,
   IndexerTransactionListResponseSchema,
-  IndexerTransactionSchema,
+  type IndexerTransactionSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
   createIndexerStructuredOutputSchema,
@@ -58,7 +58,6 @@ export const getDelegatedTransactions: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting delegated transactions from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(
         `Error getting delegated transactions from VeWorld Indexer: ${String(error)}`,
       )

@@ -2,8 +2,9 @@ import { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGet } from '@/services/veworld-indexer'
 import {
-  IndexerB3TRActionSchema,
+  type IndexerB3TRActionSchema,
   IndexerB3TRActionsListResponseSchema,
+  IndexerB3TRAppIdSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
   createIndexerStructuredOutputSchema,
@@ -20,8 +21,10 @@ export type GetB3TRActionsForUserResponse = z.infer<typeof ResponseSchema>
 
 const InputSchema = z
   .object({
-    wallet: z.string().describe('User wallet address (0x...) or VNS name'),
-    appId: z.string().optional().describe('Optional app ID to filter interactions'),
+    wallet: z.string().describe('User wallet address (0x...) or VNS name (e.g. foo.vet)'),
+    appId: IndexerB3TRAppIdSchema.optional().describe(
+      'Optional B3TR appId (veBetterDaoId — 32-byte hex) to filter interactions. If the user gives a human-readable app name (e.g. "Mugshot"), resolve it via getAppHubApps first and pass the resulting veBetterDaoId here.',
+    ),
     after: z.number().int().nonnegative().optional().describe('Return records after this Unix timestamp in seconds (e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
     before: z.number().int().nonnegative().optional().describe('Return records before this Unix timestamp in seconds (e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
     page: z.number().optional(),
@@ -78,7 +81,6 @@ export const getB3TRActionsForUser: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR actions for user: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR actions for user: ${String(error)}`)
     }
   },

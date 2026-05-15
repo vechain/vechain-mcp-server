@@ -1,8 +1,9 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
   IndexerB3TRAppOverviewSchema,
+  IndexerGetB3TRAppOverviewParamsBaseSchema,
   IndexerGetB3TRAppOverviewParamsSchema,
 } from '@/services/veworld-indexer/schemas'
 import {
@@ -23,8 +24,8 @@ export const getB3TRAppOverview: MCPTool = {
   name: 'getB3TRAppOverview',
   title: 'B3TR: App overview (totals)',
   description:
-    'Get APP overview for a specific app listed on veBetterDao via /api/v1/b3tr/actions/apps/{appId}/overview. Returns total B3TR rewards, number of rewarded actions, sustainability impact totals, global rankings for a specific app. If coming from app-hub from name or description, use veBetterDaoId. Optionally filter by roundId or date (yyyy-MM-dd UTC).',
-  inputSchema: IndexerGetB3TRAppOverviewParamsSchema.shape,
+    'Get APP overview for a specific app listed on veBetterDao via /api/v1/b3tr/actions/apps/{appId}/overview. Returns total B3TR rewards, number of rewarded actions, sustainability impact totals, global rankings for a specific app. **appId must be the veBetterDaoId (32-byte hex, e.g. 0x2fc30c...). If the user gives an app name like "Mugshot", call getAppHubApps first to resolve the veBetterDaoId — never pass an app name directly here.** Optionally filter by roundId OR date (yyyy-MM-dd UTC), but not both — they are mutually exclusive.',
+  inputSchema: IndexerGetB3TRAppOverviewParamsBaseSchema.shape,
   outputSchema: IndexerB3TRAppOverviewOutputSchema.shape,
   annotations: {
     idempotentHint: true,
@@ -51,7 +52,6 @@ export const getB3TRAppOverview: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: overview },
       }
     } catch (error) {
-      logger.warn(`Error fetching B3TR app overview: ${String(error)}`)
       return indexerErrorResponse(`Error fetching B3TR app overview: ${String(error)}`)
     }
   },

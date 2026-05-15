@@ -60,7 +60,6 @@ export const getTransactionById: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting transaction by ID from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(
         `Error getting transaction by ID from VeWorld Indexer: ${String(error)}`,
       )

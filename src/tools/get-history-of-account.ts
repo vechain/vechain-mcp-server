@@ -154,7 +154,6 @@ export const getHistoryOfAccount: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error getting History of ${params.address} from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(`Error getting History of ${params.address} from VeWorld Indexer: ${String(error)}`)
     }
   },

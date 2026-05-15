@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { getThorNetworkType } from '@/services/thor'
 import { veworldIndexerGetSingle } from '@/services/veworld-indexer'
 import {
@@ -60,7 +60,6 @@ export const getValidatorMissedPercentage: MCPTool = {
         },
       }
     } catch (error) {
-      logger.warn(`Error fetching missed blocks percentage: ${String(error)}`)
       return indexerErrorResponse(`Error fetching missed blocks percentage: ${String(error)}`)
     }
   },

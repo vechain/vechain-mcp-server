@@ -130,7 +130,6 @@ export const getTransfersOfAccount: MCPTool = {
               return indexerErrorResponse(`Failed to fetch token registry`)
             }
           } catch (error) {
-            logger.warn(`Error fetching token registry: ${String(error)}`)
             return indexerErrorResponse(`Error resolving token symbol '${tokenAddress}'`)
           }
         }
@@ -170,12 +169,10 @@ export const getTransfersOfAccount: MCPTool = {
           ? messages.join('; ')
           : 'Invalid parameters for getTransfersOfAccount.'
 
-        logger.warn(`Validation error in getTransfersOfAccount: ${validationMessage}`)
         return indexerErrorResponse(validationMessage)
       }
 
       const identifier = params.address ?? params.tokenAddress ?? 'address or tokenAddress'
-      logger.warn(`Error getting Transfers of ${identifier} from VeWorld Indexer: ${String(error)}`)
       return indexerErrorResponse(`Error getting transfers of ${identifier} from VeWorld Indexer.`)
     }
   },

@@ -816,6 +816,52 @@ export const IndexerExplorerBlockUsageItemSchema = z
 // Reuse the SustainabilityProofV2Schema so all impact metric keys are explicitly typed and documented
 export const IndexerB3TRActionProofSchema = SustainabilityProofV2Schema
 
+/**
+ * Strict validator for B3TR app identifiers (veBetterDaoId).
+ *
+ * The indexer enforces `^(0x)?[0-9a-fA-F]{64}$` and rejects anything else
+ * with `400 Bad Request: "The provided appId is invalid. It must match
+ * ^(0x)?[0-9a-fA-F]{64}$"`. Validate at the MCP boundary so we fail fast
+ * with a clear message instead of letting the indexer reject the call —
+ * this is the difference between a useful Zod error and an opaque 400 in
+ * the logs.
+ *
+ * The transform normalises to lowercase with the `0x` prefix so the URL
+ * path is deterministic regardless of how the caller cased / prefixed it.
+ */
+export const IndexerB3TRAppIdSchema = z
+  .string()
+  .regex(
+    /^(0x)?[0-9a-fA-F]{64}$/,
+    'appId must be a 32-byte hex string (64 hex chars, with optional 0x prefix). Resolve human-readable app names via getAppHubApps first.',
+  )
+  .transform((s) => {
+    const hex = s.toLowerCase().startsWith('0x') ? s.slice(2) : s
+    return `0x${hex.toLowerCase()}`
+  })
+  .describe(
+    'B3TR appId (a.k.a. veBetterDaoId) — 32-byte hex. If the user gives a human-readable app name, look it up via getAppHubApps first and pass the resulting veBetterDaoId here.',
+  )
+
+/**
+ * Helper: enforces that `roundId` and `date` are not provided at the same
+ * time. The indexer responds with `400 Bad Request: "Round ID and date
+ * cannot be provided at the same time."` when both are present.
+ */
+export const refineRoundIdDateMutualExclusion = <
+  S extends z.ZodRawShape & {
+    roundId: z.ZodOptional<z.ZodNumber>
+    date: z.ZodOptional<z.ZodString>
+  },
+>(
+  schema: z.ZodObject<S>,
+) =>
+  schema.refine((v) => !(v.roundId != null && v.date != null), {
+    message:
+      'roundId and date are mutually exclusive — pass only one (or neither for all-time totals).',
+    path: ['date'],
+  })
+
 export const IndexerB3TRActionSchema = z
   .object({
     blockNumber: ThorBlockNumberSchema,
@@ -831,14 +877,14 @@ export const IndexerB3TRActionSchema = z
 
 export const IndexerGetB3TRActionsForAppParamsSchema = z
   .object({
-    appId: z.string().describe('veBetterDaoId of the app'),
+    appId: IndexerB3TRAppIdSchema,
     after: z.number().int().nonnegative().optional().describe('Return actions after (inclusive) this Unix timestamp in seconds (e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
     before: z.number().int().nonnegative().optional().describe('Return actions before (inclusive) this Unix timestamp in seconds (e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
     page: z.number().optional(),
     size: z.number().optional(),
     direction: z.enum(['ASC', 'DESC']).optional(),
   })
-  .describe('MCP-facing input params for getB3TRActionsForApp. after/before are in seconds; the tool converts to ms before calling GET /api/v1/b3tr/actions/apps/{appId}')
+  .describe('MCP-facing input params for getB3TRActionsForApp. after/before are in seconds; the indexer also expects seconds, so values pass through unchanged to GET /api/v1/b3tr/actions/apps/{appId}.')
 
 export const IndexerB3TRActionsListResponseSchema = indexerResponseSchema(IndexerB3TRActionSchema).describe(
   'List response for B3TR actions for an app',
@@ -848,27 +894,30 @@ export const IndexerB3TRActionsListResponseSchema = indexerResponseSchema(Indexe
 export const IndexerGetB3TRActionsForUserParamsSchema = z
   .object({
     wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
-    appId: z.string().optional().describe('Optional app ID to filter interactions'),
+    appId: IndexerB3TRAppIdSchema.optional().describe(
+      'Optional B3TR appId (veBetterDaoId) to filter interactions. If the user gives a human-readable app name, resolve it via getAppHubApps first.',
+    ),
     after: z.number().int().nonnegative().optional().describe('Return records after this Unix timestamp in seconds (e.g. 1754179200 for 2025-08-03T00:00:00Z). Use seconds, NOT milliseconds.'),
     before: z.number().int().nonnegative().optional().describe('Return records before this Unix timestamp in seconds (e.g. 1754265600 for 2025-08-04T00:00:00Z). Use seconds, NOT milliseconds.'),
     page: z.number().optional().describe('Zero-based page number'),
     size: z.number().optional().describe('Page size'),
     direction: z.enum(['ASC', 'DESC']).optional().describe('Sort direction'),
   })
-  .describe('MCP-facing input params for getB3TRActionsForUser. after/before are in seconds; the tool converts to ms before calling GET /api/v1/b3tr/actions/users/{wallet}')
+  .describe('MCP-facing input params for getB3TRActionsForUser. after/before are in seconds; the indexer also expects seconds, so values pass through unchanged to GET /api/v1/b3tr/actions/users/{wallet}.')
 
 // User overview (totals) endpoint
-export const IndexerGetB3TRUserOverviewParamsSchema = z
-  .object({
-    wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
-    roundId: z.number().optional().describe('Optional round id to filter by'),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
-      .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
-  })
-  .describe('Params for GET /api/v1/b3tr/actions/users/{wallet}/overview')
+export const IndexerGetB3TRUserOverviewParamsBaseSchema = z.object({
+  wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
+  roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+    .optional()
+    .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
+})
+export const IndexerGetB3TRUserOverviewParamsSchema = refineRoundIdDateMutualExclusion(
+  IndexerGetB3TRUserOverviewParamsBaseSchema,
+).describe('Params for GET /api/v1/b3tr/actions/users/{wallet}/overview')
 
 export const IndexerB3TRUserOverviewSchema = z
   .object({
@@ -919,17 +968,18 @@ export const IndexerB3TRUserDailySummariesResponseSchema = indexerResponseSchema
 ).describe('List response for B3TR user daily summaries')
 
 // B3TR app overview
-export const IndexerGetB3TRAppOverviewParamsSchema = z
-  .object({
-    appId: z.string().describe('veBetterDaoId of the app'),
-    roundId: z.number().optional().describe('Optional round id to filter by'),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
-      .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
-  })
-  .describe('Params for GET /api/v1/b3tr/actions/apps/{appId}/overview')
+export const IndexerGetB3TRAppOverviewParamsBaseSchema = z.object({
+  appId: IndexerB3TRAppIdSchema,
+  roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+    .optional()
+    .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
+})
+export const IndexerGetB3TRAppOverviewParamsSchema = refineRoundIdDateMutualExclusion(
+  IndexerGetB3TRAppOverviewParamsBaseSchema,
+).describe('Params for GET /api/v1/b3tr/actions/apps/{appId}/overview')
 
 export const IndexerB3TRAppOverviewSchema = z
   .object({
@@ -946,18 +996,19 @@ export const IndexerB3TRAppOverviewSchema = z
   .describe('B3TR app overview (totals and rankings)')
 
 // User overview for a specific app
-export const IndexerGetB3TRUserAppOverviewParamsSchema = z
-  .object({
-    wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
-    appId: z.string().describe('App ID (veBetterDaoId) to query by'),
-    roundId: z.number().optional().describe('Optional round id to filter by'),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
-      .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
-  })
-  .describe('Params for GET /api/v1/b3tr/actions/users/{wallet}/app/{appId}/overview')
+export const IndexerGetB3TRUserAppOverviewParamsBaseSchema = z.object({
+  wallet: ThorAddressSchema.describe('User wallet address (path parameter)'),
+  appId: IndexerB3TRAppIdSchema,
+  roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+    .optional()
+    .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
+})
+export const IndexerGetB3TRUserAppOverviewParamsSchema = refineRoundIdDateMutualExclusion(
+  IndexerGetB3TRUserAppOverviewParamsBaseSchema,
+).describe('Params for GET /api/v1/b3tr/actions/users/{wallet}/app/{appId}/overview')
 
 export const IndexerB3TRUserAppOverviewSchema = z
   .object({
@@ -974,16 +1025,17 @@ export const IndexerB3TRUserAppOverviewSchema = z
   .describe('B3TR user overview for a specific app (totals and rankings)')
 
 // Global overview: GET /api/v1/b3tr/actions/global/overview
-export const IndexerGetB3TRGlobalOverviewParamsSchema = z
-  .object({
-    roundId: z.number().optional().describe('Optional round id to filter by'),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
-      .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
-  })
-  .describe('Params for GET /api/v1/b3tr/actions/global/overview')
+export const IndexerGetB3TRGlobalOverviewParamsBaseSchema = z.object({
+  roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+    .optional()
+    .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
+})
+export const IndexerGetB3TRGlobalOverviewParamsSchema = refineRoundIdDateMutualExclusion(
+  IndexerGetB3TRGlobalOverviewParamsBaseSchema,
+).describe('Params for GET /api/v1/b3tr/actions/global/overview')
 
 export const IndexerB3TRGlobalOverviewSchema = z
   .object({
@@ -1003,20 +1055,21 @@ export const IndexerB3TRLeaderboardSortBySchema = z
   .enum(['totalRewardAmount', 'actionsRewarded'])
   .describe('Sort users by totalRewardAmount or actionsRewarded')
 
-export const IndexerGetB3TRUsersLeaderboardParamsSchema = z
-  .object({
-    roundId: z.number().optional().describe('Optional round id to filter by'),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
-      .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
-    size: z.number().optional().describe('The results page size'),
-    direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
-    sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
-    cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
-  })
-  .describe('Params for GET /api/v1/b3tr/actions/leaderboards/users')
+export const IndexerGetB3TRUsersLeaderboardParamsBaseSchema = z.object({
+  roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+    .optional()
+    .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
+  size: z.number().optional().describe('The results page size'),
+  direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
+  sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
+  cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
+})
+export const IndexerGetB3TRUsersLeaderboardParamsSchema = refineRoundIdDateMutualExclusion(
+  IndexerGetB3TRUsersLeaderboardParamsBaseSchema,
+).describe('Params for GET /api/v1/b3tr/actions/leaderboards/users')
 
 export const IndexerB3TRUserLeaderboardEntrySchema = z
   .object({
@@ -1035,20 +1088,21 @@ export const IndexerB3TRUsersLeaderboardResponseSchema = indexerResponseSchema(
 ).describe('List response for users leaderboard')
 
 // Apps leaderboard: GET /api/v1/b3tr/actions/leaderboards/apps
-export const IndexerGetB3TRAppsLeaderboardParamsSchema = z
-  .object({
-    roundId: z.number().optional().describe('Optional round id to filter by'),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
-      .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
-    size: z.number().optional().describe('The results page size'),
-    direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
-    sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
-    cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
-  })
-  .describe('Params for GET /api/v1/b3tr/actions/leaderboards/apps')
+export const IndexerGetB3TRAppsLeaderboardParamsBaseSchema = z.object({
+  roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+    .optional()
+    .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
+  size: z.number().optional().describe('The results page size'),
+  direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
+  sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
+  cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
+})
+export const IndexerGetB3TRAppsLeaderboardParamsSchema = refineRoundIdDateMutualExclusion(
+  IndexerGetB3TRAppsLeaderboardParamsBaseSchema,
+).describe('Params for GET /api/v1/b3tr/actions/leaderboards/apps')
 
 export const IndexerB3TRAppLeaderboardEntrySchema = z
   .object({
@@ -1066,21 +1120,22 @@ export const IndexerB3TRAppsLeaderboardResponseSchema = indexerResponseSchema(
 ).describe('List response for apps leaderboard')
 
 // App users leaderboard: GET /api/v1/b3tr/actions/leaderboards/apps/{appId}
-export const IndexerGetB3TRAppUsersLeaderboardParamsSchema = z
-  .object({
-    appId: z.string().describe('App ID (veBetterDaoId) to query by'),
-    roundId: z.number().optional().describe('Optional round id to filter by'),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
-      .optional()
-      .describe('Optional date (UTC) to filter by, format yyyy-MM-dd'),
-    size: z.number().optional().describe('The results page size'),
-    direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
-    sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
-    cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
-  })
-  .describe('Params for GET /api/v1/b3tr/actions/leaderboards/apps/{appId}')
+export const IndexerGetB3TRAppUsersLeaderboardParamsBaseSchema = z.object({
+  appId: IndexerB3TRAppIdSchema,
+  roundId: z.number().optional().describe('Optional round id to filter by. Mutually exclusive with date.'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be in yyyy-MM-dd format (UTC)')
+    .optional()
+    .describe('Optional date (UTC) to filter by, format yyyy-MM-dd. Mutually exclusive with roundId.'),
+  size: z.number().optional().describe('The results page size'),
+  direction: z.enum(['ASC', 'DESC']).optional().describe('The sort direction'),
+  sortBy: IndexerB3TRLeaderboardSortBySchema.optional().describe('The sort by field'),
+  cursor: z.string().optional().describe('The pagination cursor returned by a previous request'),
+})
+export const IndexerGetB3TRAppUsersLeaderboardParamsSchema = refineRoundIdDateMutualExclusion(
+  IndexerGetB3TRAppUsersLeaderboardParamsBaseSchema,
+).describe('Params for GET /api/v1/b3tr/actions/leaderboards/apps/{appId}')
 
 export const IndexerB3TRAppUserLeaderboardEntrySchema = z
   .object({

@@ -52,7 +52,6 @@ export const getVevoteHistoricProposals: MCPTool = {
         structuredContent: { ok: true, network: getThorNetworkType(), data: response.data },
       }
     } catch (error) {
-      logger.warn(`Error fetching VeVote historic proposals: ${String(error)}`)
       return indexerErrorResponse(`Error fetching VeVote historic proposals: ${String(error)}`)
     }
   },
