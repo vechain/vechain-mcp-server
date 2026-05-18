@@ -26,7 +26,13 @@ const ClauseInputSchema = z.object({
   method: z
     .string()
     .describe('Function name to call. Can be a write (nonpayable / payable) or even a view if you want to bundle it.'),
-  args: z.array(z.unknown()).optional().default([]).describe('Positional arguments matching the ABI fragment.'),
+  args: z
+    .array(z.union([z.string(), z.number(), z.boolean()]))
+    .optional()
+    .default([])
+    .describe(
+      'Positional arguments matching the ABI fragment. Strings for addresses, uint/int (decimal or hex), bytes, and string types; numbers for small ints that fit safely in a JS number; booleans where the ABI expects bool.',
+    ),
   valueWei: z
     .string()
     .regex(/^([0-9]+|0x[0-9a-fA-F]+)$/)

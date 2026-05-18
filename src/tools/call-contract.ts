@@ -24,7 +24,13 @@ const ClauseInputSchema = z.object({
     .optional()
     .describe('Override the registry address. Required for "erc20" / "erc721".'),
   method: z.string().describe('View / pure function name to call (e.g. "balanceOf").'),
-  args: z.array(z.unknown()).optional().default([]).describe('Positional arguments matching the ABI fragment.'),
+  args: z
+    .array(z.union([z.string(), z.number(), z.boolean()]))
+    .optional()
+    .default([])
+    .describe(
+      'Positional arguments matching the ABI fragment. Strings for addresses, uint/int (decimal or hex), bytes, and string types; numbers for small ints that fit safely in a JS number; booleans where the ABI expects bool.',
+    ),
 })
 
 const InputSchema = z.object({

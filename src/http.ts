@@ -4,6 +4,7 @@ import { type ChildProcess, spawn } from 'node:child_process'
 import { dirname, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express, { type NextFunction, type Request, type Response } from 'express'
+import helmet from 'helmet'
 
 import { createAuthMiddleware } from './middleware/auth'
 
@@ -212,8 +213,6 @@ class McpClient {
 // ---------------------------------------------------------------------------
 // Express app
 // ---------------------------------------------------------------------------
-import express from "express"
-import helmet from "helmet"
 const app = express()
 app.use(helmet())
 app.use(express.json())
@@ -329,74 +328,129 @@ function sanitizeToolsListResult(result: unknown): unknown {
 }
 
 // -- MCP Streamable HTTP endpoint (POST /mcp) ---------------------------------
-// n8n and other MCP clients use this — transparent JSON-RPC proxy
+// n8n and other MCP clients use this — transparent JSON-RPC proxy.
+// Supports both single JSON-RPC messages and batch arrays (MCP spec 2025-03-26).
 
-app.post('/mcp', authMiddleware, backpressureMiddleware, async (req: Request, res: Response) => {
-  const body = req.body as { jsonrpc?: string; method?: string; id?: number | null; params?: unknown }
+type JsonRpcRequest = { jsonrpc?: string; method?: string; id?: string | number | null; params?: unknown }
+type JsonRpcResponse = {
+  jsonrpc: '2.0'
+  id: string | number | null
+  result?: unknown
+  error?: { code: number; message: string }
+}
 
-  if (!body || !body.jsonrpc || !body.method) {
-    res.status(400).json({
+/**
+ * Process a single JSON-RPC message and return its response.
+ *
+ * Returns `null` for notifications (messages with no `id`), which must not
+ * produce a response in the JSON-RPC spec.
+ */
+async function processJsonRpcMessage(body: JsonRpcRequest): Promise<JsonRpcResponse | null> {
+  if (!body || body.jsonrpc !== '2.0' || !body.method) {
+    return {
       jsonrpc: '2.0',
       id: body?.id ?? null,
       error: { code: -32600, message: 'Invalid JSON-RPC request' },
-    })
-    return
+    }
   }
 
-  // Notification (no id) — fire-and-forget
+  // Notification (no id) — fire-and-forget, no response
   if (body.id === undefined || body.id === null) {
     mcpClient.notify(body.method, body.params)
-    res.status(202).end()
-    return
+    return null
   }
 
-  // Request — proxy to MCP child process and return response
   if (!mcpClient.ready) {
-    res.status(503).json({
+    return {
       jsonrpc: '2.0',
       id: body.id,
       error: { code: -32000, message: 'MCP server not ready' },
-    })
-    return
+    }
+  }
+
+  const callWithSanitize = async (): Promise<unknown> => {
+    let result = await mcpClient.send(body.method as string, body.params)
+    if (body.method === 'tools/list') result = sanitizeToolsListResult(result)
+    return result
   }
 
   try {
-    let result = await mcpClient.send(body.method, body.params)
-    if (body.method === 'tools/list') result = sanitizeToolsListResult(result)
-    res.json({ jsonrpc: '2.0', id: body.id, result })
+    return { jsonrpc: '2.0', id: body.id, result: await callWithSanitize() }
   } catch (err) {
     // Retry once if MCP crashed mid-request
     if (!mcpClient.ready) {
       try {
         await waitForReady(5000)
-        let result = await mcpClient.send(body.method, body.params)
-        if (body.method === 'tools/list') result = sanitizeToolsListResult(result)
-        res.json({ jsonrpc: '2.0', id: body.id, result })
-        return
+        return { jsonrpc: '2.0', id: body.id, result: await callWithSanitize() }
       } catch (retryErr) {
         const msg = retryErr instanceof Error ? retryErr.message : 'MCP retry failed'
-        res.status(502).json({
-          jsonrpc: '2.0',
-          id: body.id,
-          error: { code: -32000, message: msg },
-        })
-        return
+        return { jsonrpc: '2.0', id: body.id, error: { code: -32000, message: msg } }
       }
     }
 
     // MCP returned an error object (from _handleLine reject)
     const e = err as { code?: number; message?: string }
     if (e?.code !== undefined && e?.message !== undefined) {
-      res.json({ jsonrpc: '2.0', id: body.id, error: e })
-      return
+      return { jsonrpc: '2.0', id: body.id, error: { code: e.code, message: e.message } }
     }
-
-    res.status(502).json({
+    return {
       jsonrpc: '2.0',
       id: body.id,
       error: { code: -32000, message: e?.message || 'MCP call failed' },
-    })
+    }
   }
+}
+
+app.post('/mcp', authMiddleware, backpressureMiddleware, async (req: Request, res: Response) => {
+  const payload = req.body as JsonRpcRequest | JsonRpcRequest[]
+
+  // Batch request — spec MUST-support per MCP 2025-03-26
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) {
+      res.status(400).json({
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32600, message: 'Invalid JSON-RPC request: empty batch' },
+      })
+      return
+    }
+    const results = await Promise.all(payload.map(processJsonRpcMessage))
+    const responses = results.filter((r): r is JsonRpcResponse => r !== null)
+    // All-notifications batch — no response body, 202 Accepted
+    if (responses.length === 0) {
+      res.status(202).end()
+      return
+    }
+    res.json(responses)
+    return
+  }
+
+  // Single message
+  const response = await processJsonRpcMessage(payload)
+  if (response === null) {
+    res.status(202).end()
+    return
+  }
+  res.json(response)
+})
+
+// MCP Streamable HTTP spec also defines GET (server-initiated SSE stream)
+// and DELETE (session termination). This wrapper does not implement either —
+// every interaction is request/response over POST. Return 405 with an
+// explicit Allow header so clients fall back cleanly instead of treating a
+// 404 (HTML body from Express) as an unrecoverable transport error.
+app.get('/mcp', authMiddleware, (_req: Request, res: Response) => {
+  res
+    .status(405)
+    .set('Allow', 'POST')
+    .json({ jsonrpc: '2.0', id: null, error: { code: -32000, message: 'Method Not Allowed: use POST /mcp' } })
+})
+
+app.delete('/mcp', authMiddleware, (_req: Request, res: Response) => {
+  res
+    .status(405)
+    .set('Allow', 'POST')
+    .json({ jsonrpc: '2.0', id: null, error: { code: -32000, message: 'Method Not Allowed: sessions are stateless' } })
 })
 
 // -- REST Routes --------------------------------------------------------------
