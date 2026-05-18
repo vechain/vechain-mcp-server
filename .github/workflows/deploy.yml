@@ -96,6 +96,11 @@ jobs:
             --query 'taskDefinition' \
             --output json > task-definition.json
 
+          # `register-task-definition` rejects parameters whose value is null
+          # (e.g. when the previous revision did not set `pidMode`, `tags`,
+          # `proxyConfiguration`, etc.). After cherry-picking the fields we
+          # want to carry over, drop every entry whose value is null so we
+          # only send the keys AWS expects to receive.
           jq --arg IMAGE_TAG "$IMAGE_TAG" '
             def retag:
               if test("@sha256:") then
@@ -125,6 +130,7 @@ jobs:
               ephemeralStorage,
               runtimePlatform
             }
+            | with_entries(select(.value != null))
           ' task-definition.json > register-task-definition.json
 
           NEW_TASK_DEF_ARN="$(aws ecs register-task-definition \
