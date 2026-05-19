@@ -1,54 +1,86 @@
-# `infra/` — CloudFormation for the MCP ECS service
+# `infra/` — CloudFormation for the MCP server
 
-This directory contains the CloudFormation template that defines the ECS
-Fargate service for the MCP server, plus per-environment parameter
-files.
+Two-stack split:
 
-## What's defined here
+- `platform.yaml` — one-time per-environment bootstrap. Creates the
+  Route 53 public hosted zone for the subdomain, the ACM certificate
+  (DNS-validated), the internet-facing ALB + HTTPS listener, the WAFv2
+  web ACL, the IAM task + execution roles, the CloudWatch log group,
+  the security groups, and the SSM `String` parameters consumed by the
+  service stack.
+- `mcp-service.yaml` — the ECS service + task definition. Reads every
+  account-specific value from SSM at deploy time (see the
+  `{{resolve:ssm:...}}` references in `params.<env>.json`), so the
+  template carries no account identifiers.
 
-`mcp-service.yaml` creates **only** the resources that belong to the MCP
-service itself:
+The split keeps shape changes (CPU/memory, env var, listener rules)
+out of the release path: only `mcp-service.yaml` ever needs to be
+touched on a release, and only its `ContainerImage` parameter is
+overridden per deploy.
 
-- `AWS::ECS::TaskDefinition` (App container)
-- `AWS::ECS::Service`
-
-Everything the service depends on — VPC, subnets, security groups, IAM
-roles, the ECS cluster, the ALB and its target group, and the log group
-— is owned by a separate platform stack and supplied to this stack as
-parameters. The release pipeline does not see any account-specific
-identifier; values come from SSM Parameter Store on the target account
-(see the `{{resolve:ssm:...}}` references in `params.<env>.json`).
-
-## How it is deployed
-
-The stack is intentionally **not** redeployed on every release. The
-release pipeline (`.github/workflows/deploy.yml`) only updates the
-running image — either by pushing a new image to a mutable tag the task
-definition references (Path A, current default) or by registering a new
-task definition revision (Path B, optional swap).
-
-For shape changes (new env var, port, CPU/memory, etc.) deploy the
-stack manually:
+## One-time bootstrap
 
 ```bash
+AWS_PROFILE=<profile> infra/bootstrap.sh <dev|prod>
+```
+
+What it does, in order:
+
+1. Generates a 32-byte API key and stores it as
+   `SSM SecureString /mcp/server/api-key` (skips if already present —
+   CloudFormation cannot create SecureString parameters).
+2. Deploys `platform.yaml` for the target environment.
+3. Prints the NS records of the freshly-created subdomain hosted zone.
+   **Operator action**: add an NS record set in the parent zone with
+   these values so the subdomain delegation is live; the script blocks
+   on `aws acm wait certificate-validated` until that happens.
+4. Deploys `mcp-service.yaml` with the current `:latest` image from
+   the local ECR repository.
+5. Prints the public FQDN and the smoke-test curl commands.
+
+After this bootstrap, normal releases run via the GitHub Actions
+workflow (`.github/workflows/publish-release.yml`) on tag push.
+
+## Shape changes after bootstrap
+
+```bash
+# Platform changes (rare — listener, WAF rules, etc.)
 aws cloudformation deploy \
-  --stack-name mcp-server-<env> \
-  --template-file infra/mcp-service.yaml \
-  --parameter-overrides file://infra/params.<env>.json \
+  --stack-name mcp-platform-<env> \
+  --template-file infra/platform.yaml \
   --capabilities CAPABILITY_IAM \
-  --no-fail-on-empty-changeset
+  --no-fail-on-empty-changeset \
+  --parameter-overrides file://infra/platform-params.<env>.json
+
+# Service shape changes (env var, CPU/memory) — note: this is NOT how
+# new images get rolled out; that is handled by the release pipeline.
+aws cloudformation deploy \
+  --stack-name mcp-service-<env> \
+  --template-file infra/mcp-service.yaml \
+  --capabilities CAPABILITY_IAM \
+  --no-fail-on-empty-changeset \
+  --parameter-overrides file://infra/params.<env>.json \
+    ContainerImage=<registry>/mcp-server:<tag>
 ```
 
-Replace `ContainerImage` in the parameter file with the actual image
-URI before the first deploy.
+## Prerequisites (per account)
 
-## SSM keys consumed
-
-The following SSM keys must exist in each target account before the
-stack is deployed for the first time:
+Both stacks expect the shared platform stack (VPC + subnets + ECS
+cluster) to publish the following SSM keys:
 
 ```
-/mcp/server/port
+/vpc/id                  # String, VPC ID
+/vpc/cidr                # String, VPC CIDR
+/vpc/private-subnet-ids  # StringList, private subnets for Fargate tasks
+/vpc/public-subnet-ids   # StringList, public subnets for the ALB
+/ecs/cluster-arn         # String, ECS cluster ARN
+/mcp/server/port         # String, container listening port (default 4000)
+```
+
+The platform stack then creates and owns the remaining `/mcp/server/*`
+keys consumed by the service stack:
+
+```
 /mcp/server/cpu
 /mcp/server/memory
 /mcp/server/task-role-arn
@@ -59,12 +91,11 @@ stack is deployed for the first time:
 /mcp/server/target-group-arn
 /mcp/server/log-group-name
 /mcp/server/desired-count
-/mcp/server/api-key            # SSM SecureString
 ```
 
-These are populated by whoever owns the platform stack.
+`/mcp/server/api-key` is a SecureString created by `bootstrap.sh`.
 
-### `MCP_API_KEY` (bearer auth)
+## `MCP_API_KEY` (bearer auth)
 
 The MCP server refuses every request to `/mcp`, `/tools` and
 `/tools/call` unless the client sends `Authorization: Bearer <key>`
@@ -72,16 +103,25 @@ matching `MCP_API_KEY` (constant-time comparison). The container reads
 the key from the env var at startup; the value is injected by ECS from
 the SSM SecureString at `ApiKeySsmName` (default `/mcp/server/api-key`).
 
-Two requirements on the platform stack:
+The platform stack grants the execution role:
 
-1. Store the key as an **SSM SecureString** under the parameter name
-   above. Rotation = update the parameter value and force a new
-   deployment of the ECS service.
-2. The ECS **task execution role** must allow:
-   - `ssm:GetParameters` on
-     `arn:aws:ssm:<region>:<account>:parameter/mcp/server/api-key`
-   - `kms:Decrypt` on the KMS key used to encrypt the SecureString
-     (`alias/aws/ssm` if the AWS-managed key is used).
+- `ssm:GetParameters` on
+  `arn:aws:ssm:<region>:<account>:parameter/mcp/server/api-key`
+- `kms:Decrypt` on `alias/aws/ssm`
 
-`/health` and `/ready` remain public so the load balancer's target
-group health check works without a credential.
+`/health` and `/ready` remain public so the ALB target group health
+check works without a credential.
+
+Rotation:
+
+```bash
+aws ssm put-parameter --name /mcp/server/api-key \
+  --type SecureString --overwrite \
+  --value "$(openssl rand -hex 32)"
+aws ecs update-service --cluster <cluster> \
+  --service mcp-server-<env> --force-new-deployment
+```
+
+Clients that have the old key keep working until the rolling deploy
+replaces all running tasks; update their copy of the key in the same
+window.
