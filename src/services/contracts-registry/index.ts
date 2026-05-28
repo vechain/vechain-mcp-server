@@ -24,6 +24,7 @@ import {
   STARGATE_NFT_ABI,
   TIMELOCK_ABI,
   TREASURY_ABI,
+  UNISWAP_V2_ROUTER_ABI,
   VEBETTER_PASSPORT_ABI,
   VOT3_ABI,
   VOTER_REWARDS_ABI,
@@ -34,7 +35,7 @@ import {
 } from './abis'
 import { CONTRACT_ADDRESSES, type NetworkName, type RegistryContractName } from './addresses'
 
-export type ContractCategory = 'vebetterdao' | 'stargate' | 'standard'
+export type ContractCategory = 'vebetterdao' | 'stargate' | 'swap' | 'standard'
 
 export type ContractEntry = {
   name: RegistryContractName
@@ -198,6 +199,30 @@ const ENTRIES: Record<RegistryContractName, ContractEntry> = {
     category: 'stargate',
     abi: NODE_MANAGEMENT_ABI,
     addresses: pick('nodeManagement'),
+    requiresAddress: false,
+  },
+  vechainSwapRouter: {
+    name: 'vechainSwapRouter',
+    displayName: 'VeChain Swap Router (UniswapV2 fork)',
+    category: 'swap',
+    abi: UNISWAP_V2_ROUTER_ABI,
+    addresses: pick('vechainSwapRouter'),
+    requiresAddress: false,
+  },
+  wvet: {
+    name: 'wvet',
+    displayName: 'Wrapped VET',
+    category: 'swap',
+    abi: ERC20_ABI,
+    addresses: pick('wvet'),
+    requiresAddress: false,
+  },
+  vtho: {
+    name: 'vtho',
+    displayName: 'VTHO (Energy)',
+    category: 'standard',
+    abi: ERC20_ABI,
+    addresses: pick('vtho'),
     requiresAddress: false,
   },
   erc20: {

@@ -29,6 +29,9 @@ export type RegistryContractName =
   | 'stargateNft'
   | 'stargateDelegation'
   | 'nodeManagement'
+  | 'vechainSwapRouter'
+  | 'wvet'
+  | 'vtho'
   | 'erc20'
   | 'erc721'
 
@@ -55,6 +58,9 @@ export const CONTRACT_ADDRESSES: Record<NetworkName, NetworkAddressMap> = {
     stargateNft: '0x1856c533ac2d94340aaa8544d35a5c1d4a21dee7',
     stargateDelegation: '0x4cb1c9ef05b529c093371264fab2c93cc6cddb0e',
     nodeManagement: '0xB0EF9D89C6b49CbA6BBF86Bf2FDf0Eee4968c6AB',
+    vechainSwapRouter: '0x6c0a6e1d922e0e63901301573370b932ae20dadb',
+    wvet: '0x45429a2255e7248e57fce99e7239aed3f84b7a53',
+    vtho: '0x0000000000000000000000000000456e65726779',
   },
   testnet: {
     b3tr: '0x849cB24E22e86d964a3fF956796d9555FB382900',
@@ -74,5 +80,8 @@ export const CONTRACT_ADDRESSES: Record<NetworkName, NetworkAddressMap> = {
     stargateDelegation: '0x32cb945dc25f4fc4214df63e3825045d6088b096',
     stargate: '0x1E02B2953AdEfEC225cF0Ec49805b1146a4429C1',
     nodeManagement: '0xde17d0a516c38c168d37685bb71465f656aa256e',
+    vechainSwapRouter: '0x91e42759290239a62ac757cf85bb5b74ace57927',
+    wvet: '0x86fb6bf6736acebbd1ddb04573e23012aa537d22',
+    vtho: '0x0000000000000000000000000000456e65726779',
   },
 }

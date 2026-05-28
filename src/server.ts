@@ -1,6 +1,11 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { initThor } from '@/services/thor'
+import {
+  initThor,
+  NetworkInputSchema,
+  runWithRequestNetwork,
+  ThorNetworkType,
+} from '@/services/thor'
 import * as tools from '@/tools'
 import { logger } from '@/utils/logger'
 import { connectAllUpstreamServers, type UpstreamClients } from './upstream-servers'
@@ -12,22 +17,50 @@ export const server = new McpServer({
 
 export let upstreamClients: UpstreamClients = {}
 
+const VALID_NETWORKS = new Set<string>(Object.values(ThorNetworkType))
+
+function pickNetworkOverride(input: unknown): ThorNetworkType | undefined {
+  if (!input || typeof input !== 'object') return undefined
+  const raw = (input as Record<string, unknown>).network
+  if (typeof raw !== 'string') return undefined
+  if (!VALID_NETWORKS.has(raw)) return undefined
+  return raw as ThorNetworkType
+}
+
 export async function initServer() {
   upstreamClients = await connectAllUpstreamServers()
   initThor()
 
-  // Tools registration
   for (const tool of Object.values(tools)) {
+    // Inject the optional per-request `network` override into every tool's
+    // input shape so the JSON schema advertised to clients exposes it
+    // uniformly. The existing tool input shape wins on collision so a tool
+    // can override the description if needed.
+    const enrichedInputSchema = {
+      network: NetworkInputSchema.optional(),
+      ...tool.inputSchema,
+    }
+
     server.registerTool(
       tool.name,
       {
         title: tool.title,
         description: tool.description,
-        inputSchema: tool.inputSchema,
+        inputSchema: enrichedInputSchema,
         outputSchema: tool.outputSchema ?? undefined,
         annotations: tool.annotations,
       },
-      tool.handler,
+      // Wrap every tool handler so that, if `network` is present on the
+      // input payload, it propagates as a per-request override via
+      // AsyncLocalStorage. Tools that don't read on-chain state simply
+      // ignore it.
+      async (input: unknown, ...rest: unknown[]) => {
+        const override = pickNetworkOverride(input)
+        return runWithRequestNetwork(override, () =>
+          // biome-ignore lint/suspicious/noExplicitAny: pass-through to MCP handler signature
+          (tool.handler as (i: any, ...r: any[]) => Promise<any>)(input, ...rest),
+        )
+      },
     )
     logger.info(`Registered tool: ${tool.name}`)
   }

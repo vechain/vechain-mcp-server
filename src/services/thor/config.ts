@@ -1,5 +1,6 @@
 import { ThorClient } from '@vechain/sdk-network'
 import { logger } from '@/utils/logger'
+import { getRequestNetwork } from './request-context'
 
 /**
  * Enum for Thor network
@@ -36,49 +37,65 @@ const THOR_NETWORK_CONFIGS: Record<ThorNetworkType, ThorNetworkConfig> = {
   },
 }
 
-const network = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
-
-let _thorClient: ThorClient | null = null
-let _thorNetworkConfig: ThorNetworkConfig | null = null
+const envNetwork = (process.env.VECHAIN_NETWORK as ThorNetworkType) ?? ThorNetworkType.MAINNET
 
 /**
- * Set the Thor network config and client
- * @param network
+ * Per-network ThorClient cache. Lazily initialized on first use; subsequent
+ * calls reuse the same instance so the SDK can pool sockets.
  */
-const initThor = (): { client: ThorClient; networkConfig: ThorNetworkConfig } => {
-  if (_thorClient && _thorNetworkConfig) {
-    return { client: _thorClient, networkConfig: _thorNetworkConfig }
-  }
+const _thorClients: Map<ThorNetworkType, ThorClient> = new Map()
 
+function getOrCreateThorClient(network: ThorNetworkType): ThorClient {
+  const cached = _thorClients.get(network)
+  if (cached) return cached
+  const cfg = THOR_NETWORK_CONFIGS[network]
   logger.info(`Initializing ${network} Thor client`)
-  _thorNetworkConfig = THOR_NETWORK_CONFIGS[network]
-  _thorClient = ThorClient.at(_thorNetworkConfig.url)
-
-  return { client: _thorClient, networkConfig: _thorNetworkConfig }
-}
-
-/**
- * Get the Thor client for the configured network
- */
-const getThorClient = (): ThorClient => {
-  const { client } = initThor()
+  const client = ThorClient.at(cfg.url)
+  _thorClients.set(network, client)
   return client
 }
 
 /**
- * Get the Thor network type for the configured network
+ * Resolve the active network for the current call. Resolution order:
+ *   1. explicit `override` argument
+ *   2. per-request override set via `runWithRequestNetwork(...)`
+ *   3. env-configured default (`VECHAIN_NETWORK`)
  */
-const getThorNetworkType = (): ThorNetworkType => {
-  const { networkConfig } = initThor()
-  return networkConfig.type
+function resolveNetwork(override?: ThorNetworkType): ThorNetworkType {
+  if (override) return override
+  const fromContext = getRequestNetwork()
+  if (fromContext) return fromContext
+  return envNetwork
 }
 
 /**
- * Get the Thor node URL for the configured network
+ * Backwards-compatible warm-up. Pre-initializes the env-default client so the
+ * first request doesn't pay the connection cost.
  */
-const getThorNodeUrl = (): string => {
-  const { networkConfig } = initThor()
-  return networkConfig.url
+const initThor = (): { client: ThorClient; networkConfig: ThorNetworkConfig } => {
+  const client = getOrCreateThorClient(envNetwork)
+  return { client, networkConfig: THOR_NETWORK_CONFIGS[envNetwork] }
+}
+
+/**
+ * Get the Thor client for the active network (override > request context > env).
+ */
+const getThorClient = (override?: ThorNetworkType): ThorClient => {
+  return getOrCreateThorClient(resolveNetwork(override))
+}
+
+/**
+ * Get the network type for the active network (override > request context > env).
+ */
+const getThorNetworkType = (override?: ThorNetworkType): ThorNetworkType => {
+  return resolveNetwork(override)
+}
+
+/**
+ * Get the Thor node URL for the active network (override > request context > env).
+ */
+const getThorNodeUrl = (override?: ThorNetworkType): string => {
+  return THOR_NETWORK_CONFIGS[resolveNetwork(override)].url
 }
 
 export { getThorClient, getThorNetworkType, getThorNodeUrl, initThor, ThorNetworkType }

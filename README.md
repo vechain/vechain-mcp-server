@@ -11,7 +11,8 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open s
 * **Unified Documentation Search**: Search across multiple VeChain ecosystem documentation resources
 * **Blockchain Data Access**: Query VeChain Thor blockchain data (blocks, transactions, accounts)
 * **Event Decoding**: Decode raw blockchain events into human-readable format
-* **Multi-Network Support**: Connect to mainnet, testnet, or solo networks
+* **Multi-Network Support**: Connect to mainnet, testnet, or solo networks (env default + per-request override)
+* **Clause Builders**: Build sign-ready multi-clause transactions for token transfers, swaps, Stargate staking/delegation/rewards, and VeBetterDAO governance — server NEVER signs or broadcasts.
 
 ## Supported Documentation Sources
 
@@ -68,6 +69,8 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open s
 * `getStargateTotalVetStaked` - Get total VET staked
 * `getStargateTokenRewards` - Get staking rewards
 * `getValidators` - Get validator information
+* `getCuratedStargateValidators` - Top validators ranked by projected APY for a given NFT tier
+* `getStargateLevels` - Canonical Stargate NFT level registry (id, tier, exact VET, multiplier)
 
 ### Transaction & Transfer Tools
 
@@ -75,7 +78,40 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open s
 * `getTransfersOfAccount` - Get token transfers
 * `getHistoryOfAccount` - Get account history
 
+### Resolution Helpers
+
+* `resolveVnsName` - Resolve a `.vet` name to a 0x address (or reverse-lookup an address)
+* `resolveToken` - Resolve a token symbol or 0x address to `{ address, symbol, decimals, isNative }`
+
+### Clause Builders (intent generation, server NEVER signs)
+
+All `build*Clauses` tools return `{ clauses: [{ to, value, data, comment? }], summary, gasHint? }` ready to be passed to VeWorld / dApp Kit / vechain-kit for signing.
+
+* `buildSendTokenClauses` - Send VET (native) or any ERC20; resolves VNS recipients
+* `buildSwapClauses` - Swap via VeChain Swap (UniswapV2 fork); routes through WVET; auto approve
+* `buildStargateStakeAndDelegateClauses` - Stake VET, mint Stargate NFT, delegate in one tx (with VTHO boost-fee approve)
+* `buildStargateDelegateClauses` - Delegate an existing Stargate NFT
+* `buildStargateUndelegateClauses` - Request delegation exit
+* `buildStargateClaimRewardsClauses` - Claim accrued VTHO rewards for one or more NFTs
+* `buildB3trConvertToVot3Clauses` - B3TR -> VOT3 (auto allowance check)
+* `buildB3trConvertToB3trClauses` - VOT3 -> B3TR
+* `buildB3trCastAllocationVotesClauses` - Vote on the current x-allocation round
+* `buildB3trClaimVoterRewardsClauses` - Claim voter rewards across rounds
+* `buildB3trCastProposalVoteClauses` - Vote on a B3TR Governor proposal
+* `buildB3trDelegateVot3Clauses` - Delegate VOT3 voting power (self by default)
+
+### Generic Contract Tools
+
+* `listKnownContracts` - List all registered contracts (B3TR, VOT3, Stargate, ERC20/721, …)
+* `getContractAbi` - Fetch the ABI for a registered contract
+* `callContract` - Read-only multicall against any registered contract
+* `buildContractTransaction` - Build a generic multi-clause transaction payload
+
 *...and many more! Use the MCP inspector or ask your AI assistant to list all available tools.*
+
+### Per-Request Network Override
+
+Every tool that reads on-chain state (or builds clauses) accepts an optional `network: "mainnet" | "testnet" | "solo"` field in its input. When omitted the server falls back to the env-configured default (`VECHAIN_NETWORK`). The override is propagated via `AsyncLocalStorage`, so a request for testnet does not leak into a parallel mainnet request.
 
 ## Quick Start
 

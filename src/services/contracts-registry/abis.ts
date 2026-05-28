@@ -56,6 +56,61 @@ export const STARGATE_DELEGATION_ABI = StargateDelegationAbi as Abi
 export const NODE_MANAGEMENT_ABI = NodeManagementAbi as Abi
 
 /**
+ * UniswapV2-fork router used by VeChain Swap. Subset that covers the read
+ * (`getAmountsOut`) and write (`swapExact*`) entrypoints we expose.
+ */
+export const UNISWAP_V2_ROUTER_ABI: Abi = [
+  {
+    type: 'function',
+    name: 'getAmountsOut',
+    stateMutability: 'view',
+    inputs: [
+      { type: 'uint256', name: 'amountIn' },
+      { type: 'address[]', name: 'path' },
+    ],
+    outputs: [{ type: 'uint256[]', name: 'amounts' }],
+  },
+  {
+    type: 'function',
+    name: 'swapExactETHForTokens',
+    stateMutability: 'payable',
+    inputs: [
+      { type: 'uint256', name: 'amountOutMin' },
+      { type: 'address[]', name: 'path' },
+      { type: 'address', name: 'to' },
+      { type: 'uint256', name: 'deadline' },
+    ],
+    outputs: [{ type: 'uint256[]', name: 'amounts' }],
+  },
+  {
+    type: 'function',
+    name: 'swapExactTokensForETH',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { type: 'uint256', name: 'amountIn' },
+      { type: 'uint256', name: 'amountOutMin' },
+      { type: 'address[]', name: 'path' },
+      { type: 'address', name: 'to' },
+      { type: 'uint256', name: 'deadline' },
+    ],
+    outputs: [{ type: 'uint256[]', name: 'amounts' }],
+  },
+  {
+    type: 'function',
+    name: 'swapExactTokensForTokens',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { type: 'uint256', name: 'amountIn' },
+      { type: 'uint256', name: 'amountOutMin' },
+      { type: 'address[]', name: 'path' },
+      { type: 'address', name: 'to' },
+      { type: 'uint256', name: 'deadline' },
+    ],
+    outputs: [{ type: 'uint256[]', name: 'amounts' }],
+  },
+]
+
+/**
  * Canonical ERC20 ABI (read + write subset).
  * Hand-written to keep the bundle lean and to provide a stable surface for
  * arbitrary ERC20 tokens identified by address.

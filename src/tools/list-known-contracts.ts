@@ -4,7 +4,7 @@ import { getThorNetworkType } from '@/services/thor'
 import type { MCPTool } from '@/types'
 import { logger } from '@/utils/logger'
 
-const CategorySchema = z.enum(['vebetterdao', 'stargate', 'standard'])
+const CategorySchema = z.enum(['vebetterdao', 'stargate', 'swap', 'standard'])
 
 const InputSchema = z.object({
   category: CategorySchema.optional().describe('Filter entries by category'),

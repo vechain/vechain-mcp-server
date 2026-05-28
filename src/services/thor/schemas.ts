@@ -1,5 +1,17 @@
 import type { AbiParameter } from 'viem'
 import { z } from 'zod'
+import { ThorNetworkType } from './config'
+
+/**
+ * Per-request network override, accepted by every tool that reads on-chain
+ * state or talks to the VeWorld Indexer. When omitted, the server falls back
+ * to the env-configured default (`VECHAIN_NETWORK`).
+ */
+export const NetworkInputSchema = z
+  .nativeEnum(ThorNetworkType)
+  .describe(
+    'Per-request network override (mainnet | testnet | solo). When omitted the server uses the env-configured default.',
+  )
 
 /**
  * Schema for Thor block revision
