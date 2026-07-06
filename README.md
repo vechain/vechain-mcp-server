@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vechain-vechain-mcp-server-badge.png)](https://mseep.ai/app/vechain-vechain-mcp-server)
+
 # VeChain MCP Server
 
 A Model Context Protocol (MCP) server that provides AI assistants with access to VeChain ecosystem documentation and blockchain data. This server enables seamless integration of VeChain capabilities into AI workflows through the MCP standard.
