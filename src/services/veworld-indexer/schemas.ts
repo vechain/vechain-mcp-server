@@ -615,13 +615,14 @@ export const IndexerStargateNftHoldersByLevelSchema = z
 
 export const IndexerStargateNftHoldersTotalSchema = z
   .object({
-    blockId: ThorBlockIdSchema,
-    blockNumber: ThorBlockNumberSchema,
-    blockTimestamp: z.number(),
+    // Block metadata no longer returned by /api/v1/stargate/nft-holders; keep optional.
+    blockId: ThorBlockIdSchema.optional(),
+    blockNumber: ThorBlockNumberSchema.optional(),
+    blockTimestamp: z.number().optional(),
     total: z.number(),
     byLevel: IndexerStargateNftHoldersByLevelSchema,
   })
-  .describe('Total number of Stargate NFTs with block metadata and breakdown by level')
+  .describe('Total number of Stargate NFTs and breakdown by level (block metadata included when present)')
 
 // Historic totals (running totals time-series)
 export const IndexerHistoricRangeSchema = z
