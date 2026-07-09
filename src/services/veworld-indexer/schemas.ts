@@ -615,9 +615,10 @@ export const IndexerStargateNftHoldersByLevelSchema = z
 
 export const IndexerStargateNftHoldersTotalSchema = z
   .object({
-    blockId: ThorBlockIdSchema,
-    blockNumber: ThorBlockNumberSchema,
-    blockTimestamp: z.number(),
+    // Block metadata no longer returned by /api/v1/stargate/nft-holders; keep optional.
+    blockId: ThorBlockIdSchema.optional(),
+    blockNumber: ThorBlockNumberSchema.optional(),
+    blockTimestamp: z.number().optional(),
     total: z.number(),
     byLevel: IndexerStargateNftHoldersByLevelSchema,
   })
