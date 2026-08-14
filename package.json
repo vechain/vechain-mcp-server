@@ -77,5 +77,10 @@
     "rimraf": "^5.0.10",
     "uuid": "^11.1.0",
     "adm-zip@<0.5.2": "0.5.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "handlebars@4.7.8": "https://npm.aikido.io/6dca6ebaaa6aadea1103/handlebars@4.7.8-aikido.6"
+    }
   }
 }
