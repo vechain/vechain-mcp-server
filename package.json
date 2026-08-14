@@ -24,6 +24,9 @@
     "README.md",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=20.18.1"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "LOG_LEVEL=0 PORT=4000 MCP_AUTH_DISABLED=true tsx --watch src/http.ts",

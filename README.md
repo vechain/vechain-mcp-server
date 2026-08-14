@@ -23,7 +23,7 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open s
 
 ## Prerequisites
 
-* **Node.js** 18.x or higher (required for running the server)
+* **Node.js** 20.18.1 or higher (required for running the server)
 * An **MCP-compatible client** such as:
   + [Claude Desktop](https://claude.ai/download) (macOS/Windows)
   + [Cursor](https://cursor.sh) (code editor with MCP support)
@@ -218,7 +218,7 @@ If you want to contribute to the VeChain MCP server or test local changes, follo
 
 ### Prerequisites for Development
 
-* Node.js 18.x or higher
+* Node.js 20.18.1 or higher
 * npm or yarn package manager
 * Git
 
