@@ -31,17 +31,23 @@ describe('isBlockedAddress', () => {
     'fe80::1',
     'fc00::1',
     'fd12:3456::1',
-    '::ffff:127.0.0.1', // IPv4-mapped loopback
+    '::ffff:127.0.0.1', // IPv4-mapped loopback (dotted-quad form)
+    '::ffff:7f00:1', // same address in hex form
+    '::ffff:a9fe:aa02', // 169.254.170.2 in hex form
+    '::ffff:c0a8:1', // 192.168.0.1 in hex form
   ])('blocks internal/special address %s', addr => {
     expect(isBlockedAddress(addr)).toBe(true)
   })
 
-  test.each(['8.8.8.8', '1.1.1.1', '93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946'])(
-    'allows public address %s',
-    addr => {
-      expect(isBlockedAddress(addr)).toBe(false)
-    },
-  )
+  test.each([
+    '8.8.8.8',
+    '1.1.1.1',
+    '93.184.216.34',
+    '2606:2800:220:1:248:1893:25c8:1946',
+    '::ffff:8.8.8.8', // IPv4-mapped public address stays allowed
+  ])('allows public address %s', addr => {
+    expect(isBlockedAddress(addr)).toBe(false)
+  })
 
   test('refuses a non-IP string', () => {
     expect(isBlockedAddress('not-an-ip')).toBe(true)

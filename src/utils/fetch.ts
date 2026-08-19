@@ -1,129 +1,73 @@
-import { lookup as dnsLookup } from 'node:dns'
-import * as http from 'node:http'
-import * as https from 'node:https'
-import { isIP, type LookupFunction } from 'node:net'
+import { lookup as dnsLookup } from 'node:dns/promises'
+import { isIP } from 'node:net'
 import { isAllowedProtocol, isBlockedAddress } from '@/utils/ssrf'
-
-/**
- * DNS lookup wrapper that refuses to resolve a hostname to any blocked
- * (private/loopback/link-local/…) address.
- *
- * Because the HTTP client connects to exactly the address this callback
- * returns, validating here closes the destination for every physical
- * connection — the initial request AND every redirect hop — and leaves no
- * DNS-rebinding gap between the check and the connect.
- */
-const safeLookup: LookupFunction = (hostname, options, callback) => {
-  dnsLookup(hostname, { all: true, verbatim: options?.verbatim !== false }, (err, addresses) => {
-    if (err) return callback(err, '', 0)
-    for (const a of addresses) {
-      if (isBlockedAddress(a.address)) {
-        const blocked = new Error(
-          `Refused to connect to blocked address ${a.address} for host ${hostname}`,
-        ) as NodeJS.ErrnoException
-        return callback(blocked, '', 0)
-      }
-    }
-    if (options?.all) return callback(null, addresses)
-    const first = addresses[0]
-    callback(null, first.address, first.family)
-  })
-}
 
 type FetchOptions = {
   timeoutMs?: number
   maxRedirects?: number
-  maxBytes?: number
 }
 
-type GetResult =
-  | { type: 'body'; text: string }
-  | { type: 'redirect'; location: string }
-  | { type: 'error' }
+/**
+ * True when `url` may be fetched: the scheme is http(s), it carries no
+ * embedded credentials, and its host does not resolve to an internal
+ * (private/loopback/link-local/reserved) address.
+ *
+ * Literal-IP hosts are checked directly; hostnames are resolved and every
+ * returned address must be acceptable, so a name that maps to both a public
+ * and an internal address is refused rather than raced.
+ */
+async function isAllowedDestination(url: URL): Promise<boolean> {
+  if (!isAllowedProtocol(url.protocol)) return false
+  if (url.username || url.password) return false
 
-function httpGet(url: URL, timeoutMs: number, maxBytes: number): Promise<GetResult> {
-  return new Promise(resolve => {
-    let settled = false
-    const done = (r: GetResult): void => {
-      if (settled) return
-      settled = true
-      resolve(r)
-    }
+  const host = url.hostname.replace(/^\[|\]$/g, '')
+  if (isIP(host) !== 0) return !isBlockedAddress(host)
 
-    const mod = url.protocol === 'https:' ? https : http
-    const req = mod.request(
-      url,
-      {
-        method: 'GET',
-        lookup: safeLookup,
-        headers: { Accept: 'application/json, text/plain, */*' },
-      },
-      res => {
-        const status = res.statusCode ?? 0
-
-        if (status >= 300 && status < 400 && res.headers.location) {
-          res.resume()
-          done({ type: 'redirect', location: res.headers.location })
-          return
-        }
-        if (status < 200 || status >= 300) {
-          res.resume()
-          done({ type: 'error' })
-          return
-        }
-
-        let bytes = 0
-        const chunks: Buffer[] = []
-        res.on('data', (chunk: Buffer) => {
-          bytes += chunk.length
-          if (bytes > maxBytes) {
-            req.destroy()
-            done({ type: 'error' })
-            return
-          }
-          chunks.push(chunk)
-        })
-        res.on('end', () => done({ type: 'body', text: Buffer.concat(chunks).toString('utf8') }))
-        res.on('error', () => done({ type: 'error' }))
-      },
-    )
-
-    req.on('error', () => done({ type: 'error' }))
-    req.setTimeout(timeoutMs, () => {
-      req.destroy()
-      done({ type: 'error' })
-    })
-    req.end()
-  })
+  try {
+    const addresses = await dnsLookup(host, { all: true })
+    if (addresses.length === 0) return false
+    return addresses.every(a => !isBlockedAddress(a.address))
+  } catch {
+    return false
+  }
 }
 
 /**
  * Fetch a URL and parse the response body as JSON.
  *
- * Hardened against SSRF: only `http(s)` is allowed, embedded credentials are
- * rejected, redirects are followed manually (bounded) and re-validated per
- * hop, and every connection is refused if the resolved IP is private,
- * loopback, link-local, or otherwise internal. The URL host is
- * attacker-influenceable (it originates from on-chain xApp metadata), so the
- * destination — not just the input string — is what gets validated.
+ * The URL is attacker-influenceable — it originates from on-chain xApp
+ * metadata, where an app admin/moderator can set an arbitrary absolute
+ * `http(s)` URL — so the destination is validated, not just the input
+ * string: only http(s), no embedded credentials, and no host that resolves
+ * to a private/loopback/link-local/reserved address. Redirects are followed
+ * manually (bounded) so every hop is validated the same way rather than
+ * letting a public first hop bounce the request inward.
+ *
+ * Note: validation resolves the hostname and the subsequent request resolves
+ * it again, so a DNS entry that changes between the two could still be
+ * followed (classic DNS-rebinding). Closing that would require pinning the
+ * connection to the validated address via a custom dispatcher; the checks
+ * here block the practical vector, which is a URL pointing straight at an
+ * internal host.
  *
  * Returns `null` instead of throwing when:
  *  - the URL is malformed, uses a disallowed scheme, or carries credentials,
  *  - the destination resolves to a blocked address,
  *  - the network request fails or times out,
- *  - the response status is not OK, exceeds the size cap, or is not JSON.
+ *  - too many redirects are followed,
+ *  - the response status is not OK, or the body cannot be parsed as JSON.
  *
  * Designed for best-effort metadata fetches where the caller treats a
  * missing/invalid/refused resource as a soft failure.
  */
 export async function fetchJson(url: string, options: FetchOptions = {}): Promise<unknown | null> {
-  const timeoutMs = options.timeoutMs ?? 15_000
+  const timeoutMs = options.timeoutMs ?? 30_000
   const maxRedirects = options.maxRedirects ?? 5
-  const maxBytes = options.maxBytes ?? 5_000_000
 
   try {
     let current = url
-    for (let hop = 0; hop <= maxRedirects; hop++) {
+
+    for (let hop = 0; ; hop++) {
       let parsed: URL
       try {
         parsed = new URL(current)
@@ -131,38 +75,35 @@ export async function fetchJson(url: string, options: FetchOptions = {}): Promis
         return null
       }
 
-      if (!isAllowedProtocol(parsed.protocol)) return null
-      if (parsed.username || parsed.password) return null
+      if (!(await isAllowedDestination(parsed))) return null
 
-      // When the host is already an IP literal, the network layer connects
-      // directly and never invokes `lookup`, so validate it here. Hostnames
-      // are validated in `safeLookup` at resolve/connect time.
-      const host = parsed.hostname.replace(/^\[|\]$/g, '')
-      if (isIP(host) !== 0 && isBlockedAddress(host)) return null
+      const res = await fetch(parsed, {
+        method: 'GET',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: { Accept: 'application/json, text/plain, */*' },
+      })
 
-      const result = await httpGet(parsed, timeoutMs, maxBytes)
-
-      if (result.type === 'redirect') {
-        if (hop === maxRedirects) return null
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location')
+        if (!location || hop >= maxRedirects) return null
         try {
-          current = new URL(result.location, parsed).toString()
+          current = new URL(location, parsed).toString()
         } catch {
           return null
         }
         continue
       }
 
-      if (result.type === 'body') {
-        try {
-          return JSON.parse(result.text)
-        } catch {
-          return null
-        }
-      }
+      if (!res.ok) return null
 
-      return null
+      const text = await res.text()
+      try {
+        return JSON.parse(text)
+      } catch {
+        return null
+      }
     }
-    return null
   } catch {
     return null
   }
