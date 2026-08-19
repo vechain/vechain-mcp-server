@@ -5,6 +5,39 @@ import { isAllowedProtocol, isBlockedAddress } from '@/utils/ssrf'
 type FetchOptions = {
   timeoutMs?: number
   maxRedirects?: number
+  maxBytes?: number
+}
+
+/**
+ * Read a response body as text, giving up once `maxBytes` have been read.
+ *
+ * The body is streamed rather than buffered in one go so an oversized
+ * response is abandoned mid-flight instead of being fully materialised in
+ * memory first. Returns `null` when the cap is exceeded.
+ */
+async function readTextCapped(res: Response, maxBytes: number): Promise<string | null> {
+  const declared = Number(res.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > maxBytes) return null
+  if (!res.body) return ''
+
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > maxBytes) {
+        await reader.cancel()
+        return null
+      }
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  return Buffer.concat(chunks).toString('utf8')
 }
 
 /**
@@ -55,7 +88,8 @@ async function isAllowedDestination(url: URL): Promise<boolean> {
  *  - the destination resolves to a blocked address,
  *  - the network request fails or times out,
  *  - too many redirects are followed,
- *  - the response status is not OK, or the body cannot be parsed as JSON.
+ *  - the response status is not OK, the body exceeds the size cap, or it
+ *    cannot be parsed as JSON.
  *
  * Designed for best-effort metadata fetches where the caller treats a
  * missing/invalid/refused resource as a soft failure.
@@ -63,6 +97,7 @@ async function isAllowedDestination(url: URL): Promise<boolean> {
 export async function fetchJson(url: string, options: FetchOptions = {}): Promise<unknown | null> {
   const timeoutMs = options.timeoutMs ?? 30_000
   const maxRedirects = options.maxRedirects ?? 5
+  const maxBytes = options.maxBytes ?? 10_000_000
 
   try {
     let current = url
@@ -97,7 +132,8 @@ export async function fetchJson(url: string, options: FetchOptions = {}): Promis
 
       if (!res.ok) return null
 
-      const text = await res.text()
+      const text = await readTextCapped(res, maxBytes)
+      if (text === null) return null
       try {
         return JSON.parse(text)
       } catch {

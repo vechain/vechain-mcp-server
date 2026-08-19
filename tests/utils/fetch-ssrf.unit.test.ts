@@ -108,12 +108,37 @@ describe('fetchJson SSRF guard', () => {
     expect(hits).toEqual([])
   })
 
-  test('does not follow a redirect into a blocked destination', async () => {
-    // The first hop is itself loopback here, so it is refused before any
-    // connection — the redirect is never even reached.
+  test('refuses a loopback first hop before the redirect is even reached', async () => {
     const result = await fetchJson(`http://127.0.0.1:${port}/redirect`)
     expect(result).toBeNull()
     expect(hits).toEqual([])
+  })
+
+  test('does not follow a redirect from an allowed host into a blocked one', async () => {
+    // The cases above are refused at the first hop, so they never exercise
+    // redirect handling. Start from a public literal IP (allowed without any
+    // DNS lookup) and stub the transport so it answers with a redirect
+    // pointing at loopback — the hop that must be refused.
+    const realFetch = globalThis.fetch
+    const calls: string[] = []
+    globalThis.fetch = jest.fn(async (input: string | URL | Request) => {
+      calls.push(String(input))
+      return new Response(null, {
+        status: 302,
+        headers: { location: `http://127.0.0.1:${port}/secret` },
+      })
+    }) as unknown as typeof globalThis.fetch
+
+    try {
+      const result = await fetchJson('http://8.8.8.8/metadata.json')
+      expect(result).toBeNull()
+      // The first hop was fetched; the loopback redirect target never was.
+      expect(calls).toHaveLength(1)
+      expect(calls[0]).toContain('8.8.8.8')
+      expect(hits).toEqual([])
+    } finally {
+      globalThis.fetch = realFetch
+    }
   })
 
   test('rejects a disallowed scheme', async () => {
@@ -129,5 +154,23 @@ describe('fetchJson SSRF guard', () => {
   test('returns null for a malformed URL', async () => {
     expect(await fetchJson('http://')).toBeNull()
     expect(await fetchJson('not a url')).toBeNull()
+  })
+
+  test('gives up on a body that exceeds the size cap', async () => {
+    const realFetch = globalThis.fetch
+    const oversized = JSON.stringify({ padding: 'x'.repeat(5_000) })
+    globalThis.fetch = jest.fn(
+      async () => new Response(oversized, { status: 200, headers: { 'content-type': 'application/json' } }),
+    ) as unknown as typeof globalThis.fetch
+
+    try {
+      expect(await fetchJson('http://8.8.8.8/big.json', { maxBytes: 1_000 })).toBeNull()
+      // The same body is fine once the cap allows it.
+      expect(await fetchJson('http://8.8.8.8/big.json', { maxBytes: 1_000_000 })).toEqual(
+        JSON.parse(oversized),
+      )
+    } finally {
+      globalThis.fetch = realFetch
+    }
   })
 })

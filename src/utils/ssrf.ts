@@ -44,9 +44,12 @@ blockList.addSubnet('ff00::', 8, 'ipv6') // multicast
 blockList.addSubnet('64:ff9b::', 96, 'ipv6') // NAT64 (maps to IPv4)
 
 /**
- * Pull the embedded IPv4 out of an IPv4-mapped / IPv4-compatible IPv6 address
- * (e.g. `::ffff:127.0.0.1` or `::ffff:7f00:1`). Returns null when the address
- * does not embed an IPv4 value.
+ * Pull the embedded IPv4 out of an IPv4-mapped IPv6 address written with a
+ * dotted-quad tail (e.g. `::ffff:127.0.0.1`). Returns null otherwise.
+ *
+ * This is only a fallback: `BlockList` already evaluates IPv4-mapped
+ * addresses — including the hex form, e.g. `::ffff:7f00:1` — against the
+ * IPv4 rules, so both notations are blocked with or without this helper.
  */
 function embeddedIPv4(address: string): string | null {
   const lower = address.toLowerCase()
