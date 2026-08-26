@@ -8,18 +8,29 @@ Description: >-
   resolved at deploy time via SSM, see infra/params.<env>.json).
 
 Parameters:
+  # ---------------------------------------------------------------------------
+  # Per-deploy overrides
+  # ---------------------------------------------------------------------------
   EnvironmentName:
     Type: String
     Description: Short environment identifier appended to resource names (e.g. dev, prod).
 
+  ContainerImage:
+    Type: String
+    Description: Full image URI to run (e.g. <registry>/<repo>:<tag>). Supplied by the release pipeline.
+
+  DesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 0
+
+  # ---------------------------------------------------------------------------
+  # Static defaults (literal)
+  # ---------------------------------------------------------------------------
   ServiceName:
     Type: String
     Default: mcp-server
     Description: Base name for the ECS service and TaskDefinition family.
-
-  ContainerImage:
-    Type: String
-    Description: Full image URI to run (e.g. <registry>/<repo>:<tag>). Supplied by the release pipeline.
 
   ContainerPort:
     Type: Number
@@ -36,39 +47,6 @@ Parameters:
     Default: '1024'
     Description: Fargate-compatible memory value in MiB.
 
-  TaskRoleArn:
-    Type: String
-    Description: IAM role assumed by the container at runtime (application permissions).
-
-  ExecutionRoleArn:
-    Type: String
-    Description: IAM role used by ECS to pull the image and write logs.
-
-  ClusterArn:
-    Type: String
-    Description: ARN of the ECS cluster that hosts the service.
-
-  SubnetIds:
-    Type: CommaDelimitedList
-    Description: Private subnets the Fargate tasks run in.
-
-  SecurityGroupIds:
-    Type: CommaDelimitedList
-    Description: Security groups attached to the Fargate ENIs.
-
-  TargetGroupArn:
-    Type: String
-    Description: ALB target group ARN that fronts the service.
-
-  LogGroupName:
-    Type: String
-    Description: Pre-existing CloudWatch log group to stream container logs into.
-
-  DesiredCount:
-    Type: Number
-    Default: 1
-    MinValue: 0
-
   HealthCheckGracePeriodSeconds:
     Type: Number
     Default: 60
@@ -81,6 +59,46 @@ Parameters:
       enforced by the MCP server on protected routes. The ECS execution role
       must have permission to read this parameter and decrypt it with its KMS
       key.
+
+  # ---------------------------------------------------------------------------
+  # Resolved from SSM at deploy time. Defaults point at the keys the platform
+  # stack publishes (infra/platform.yaml); override only if the platform
+  # stack stores them under a different name.
+  # ---------------------------------------------------------------------------
+  TaskRoleArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /mcp/server/task-role-arn
+    Description: IAM role assumed by the container at runtime (application permissions).
+
+  ExecutionRoleArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /mcp/server/execution-role-arn
+    Description: IAM role used by ECS to pull the image and write logs.
+
+  ClusterArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /mcp/server/cluster-arn
+    Description: ARN of the ECS cluster that hosts the service.
+
+  SubnetIds:
+    Type: AWS::SSM::Parameter::Value<List<String>>
+    Default: /mcp/server/subnet-ids
+    Description: Private subnets the Fargate tasks run in.
+
+  SecurityGroupIds:
+    Type: AWS::SSM::Parameter::Value<List<String>>
+    Default: /mcp/server/security-group-ids
+    Description: Security groups attached to the Fargate ENIs.
+
+  TargetGroupArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /mcp/server/target-group-arn
+    Description: ALB target group ARN that fronts the service.
+
+  LogGroupName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /mcp/server/log-group-name
+    Description: Pre-existing CloudWatch log group to stream container logs into.
 
 Resources:
   TaskDefinition:
