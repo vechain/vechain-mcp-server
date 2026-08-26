@@ -80,7 +80,11 @@ export const getTokenFiatPrice: MCPTool = {
       }
     } catch (error) {
       const message = `Error fetching ${token.toUpperCase()} price in ${fiat.toUpperCase()}: ${String(error)}`
-      logger.warn(message)
+      if (error instanceof z.ZodError) {
+        logger.info(`Invalid input for getTokenFiatPrice: ${message}`)
+      } else {
+        logger.warn(message)
+      }
 
       const data: z.infer<typeof TokenFiatPriceDataSchema> = {
         token: token.toLowerCase() as z.infer<typeof TokenSchema>,

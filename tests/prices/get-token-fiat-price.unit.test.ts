@@ -113,15 +113,37 @@ describe('getTokenFiatPrice tool (unit)', () => {
 
   test('returns error for unsupported token', async () => {
     const result = await getTokenFiatPrice.handler({ token: 'btc', fiat: 'usd' })
-    const data = result.structuredContent as { error?: string }
-    
-    expect(data.error).toBeDefined()
+    const data = result.structuredContent as {
+      token: string
+      fiat: string
+      price: number
+      source: string
+      error?: string
+    }
+
+    expect(data.token).toBe('btc')
+    expect(data.fiat).toBe('usd')
+    expect(data.source).toBe('oracle')
+    expect(Number.isNaN(data.price)).toBe(true)
+    expect(data.error).toContain('invalid_enum_value')
+    expect(data.error).toContain('btc')
   })
 
   test('returns error for unsupported fiat', async () => {
     const result = await getTokenFiatPrice.handler({ token: 'vet', fiat: 'jpy' })
-    const data = result.structuredContent as { error?: string }
-    
-    expect(data.error).toBeDefined()
+    const data = result.structuredContent as {
+      token: string
+      fiat: string
+      price: number
+      source: string
+      error?: string
+    }
+
+    expect(data.token).toBe('vet')
+    expect(data.fiat).toBe('jpy')
+    expect(data.source).toBe('oracle')
+    expect(Number.isNaN(data.price)).toBe(true)
+    expect(data.error).toContain('invalid_enum_value')
+    expect(data.error).toContain('jpy')
   })
 })
