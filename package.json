@@ -48,7 +48,7 @@
     "helmet": "8.1.0",
     "tslog": "^4.10.2",
     "viem": "^2.38.5",
-    "zod": "^3.25.76"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.7",
